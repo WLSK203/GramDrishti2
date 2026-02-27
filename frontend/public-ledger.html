@@ -635,10 +635,12 @@
                 var total = budget.totalReceived || 0;
                 var spent = budget.totalSpent || 0;
                 var pending = budget.pendingApproval || 0;
+                
                 document.getElementById('ledgerTotalReceived').textContent = fmt(total);
+                
                 document.getElementById('ledgerSpent').textContent = fmt(spent);
                 document.getElementById('ledgerPendingApproval').textContent = fmt(pending);
-                document.getElementById('ledgerFiscalSub').textContent = (budget.fiscalYear || '') + (budget.lastUpdated ? ' • Updated ' + budget.lastUpdated : '');
+                document.getElementById('ledgerFiscalSub').textContent = (budget.fiscalYear || 'FY 2024-25') + (budget.lastUpdated ? ' • Updated ' + budget.lastUpdated : '');
                 var pctReleased = total ? Math.round((spent / total) * 100) : 0;
                 var pctPending = total ? Math.round((pending / total) * 100) : 0;
                 document.getElementById('ledgerBarSpent').style.width = pctReleased + '%';

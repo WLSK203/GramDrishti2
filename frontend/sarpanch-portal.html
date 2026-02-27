@@ -437,19 +437,19 @@
                     <div class="sp-budget-rows">
                         <div class="sp-brow received">
                             <span class="sp-brow-label">Total Received</span>
-                            <span class="sp-brow-value">₹42,80,000</span>
+                            <span class="sp-brow-value" id="spTotalReceived">—</span>
                         </div>
                         <div class="sp-brow spent">
                             <span class="sp-brow-label">Spent</span>
-                            <span class="sp-brow-value">₹30,00,000</span>
+                            <span class="sp-brow-value" id="spSpent">—</span>
                         </div>
                         <div class="sp-brow committed">
                             <span class="sp-brow-label">Committed</span>
-                            <span class="sp-brow-value">₹8,25,000</span>
+                            <span class="sp-brow-value" id="spCommitted">—</span>
                         </div>
                         <div class="sp-brow avail">
                             <span class="sp-brow-label">✅ Available</span>
-                            <span class="sp-brow-value">₹4,55,000</span>
+                            <span class="sp-brow-value" id="spAvailable">—</span>
                         </div>
                     </div>
 
@@ -576,8 +576,32 @@
 
             try {
                 var budget = await GramSabha.getBudget(villageId);
-                if (budget && budget.totalReceived) {
-                    document.getElementById('budgetValue').textContent = GramSabha.formatCurrency(budget.totalReceived);
+                if (budget) {
+                    var total = budget.totalReceived || 0;
+                    var spent = budget.totalSpent    || 0;
+                    var committed = budget.pendingApproval || 0;
+                    var avail = budget.available     || 0;
+                    
+                    document.getElementById('budgetValue').textContent = GramSabha.formatCurrency(total);
+                    
+                    if (document.getElementById('spTotalReceived')) document.getElementById('spTotalReceived').textContent = GramSabha.formatCurrency(total);
+                    if (document.getElementById('spSpent')) document.getElementById('spSpent').textContent = GramSabha.formatCurrency(spent);
+                    if (document.getElementById('spCommitted')) document.getElementById('spCommitted').textContent = GramSabha.formatCurrency(committed);
+                    if (document.getElementById('spAvailable')) document.getElementById('spAvailable').textContent = GramSabha.formatCurrency(avail);
+                    
+                    // Update ring
+                    var pct = total > 0 ? Math.round((spent / total) * 100) : 0;
+                    var ringPct = document.querySelector('.sp-ring-pct');
+                    if(ringPct) ringPct.textContent = pct + '%';
+                    
+                    var ringFg = document.querySelector('.sp-ring-fg');
+                    if (ringFg) {
+                        var radius = parseFloat(ringFg.getAttribute('r'));
+                        var dasharray = 2 * Math.PI * radius;
+                        var offset = dasharray - (dasharray * pct / 100);
+                        ringFg.style.strokeDasharray = dasharray;
+                        ringFg.style.strokeDashoffset = offset;
+                    }
                 }
             } catch(e) {}
         }

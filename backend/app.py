@@ -430,13 +430,27 @@ def approve_project(project_id):
                 )
 
                 if village_id and proj.get("sanctioned") is not None:
+                    # Update budget summary
                     cur.execute(
                         """
                         UPDATE budget_summary
-                        SET pending_approval = GREATEST(0, pending_approval - COALESCE(%s,0))
+                        SET pending_approval = GREATEST(0, pending_approval - COALESCE(%s,0)),
+                            available = GREATEST(0, available - COALESCE(%s,0)),
+                            total_spent = total_spent + COALESCE(%s,0)
                         WHERE village_id = %s
                         """,
-                        (proj.get("sanctioned"), village_id),
+                        (proj.get("sanctioned"), proj.get("sanctioned"), proj.get("sanctioned"), village_id),
+                    )
+                    
+                    # Also update project's internal tracking
+                    cur.execute(
+                        """
+                        UPDATE projects
+                        SET released = COALESCE(released, 0) + COALESCE(%s,0),
+                            spent = COALESCE(spent, 0) + COALESCE(%s,0)
+                        WHERE id = %s
+                        """,
+                        (proj.get("sanctioned"), proj.get("sanctioned"), proj_id),
                     )
 
                 cur.execute(

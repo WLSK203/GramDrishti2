@@ -48,12 +48,13 @@
 
     <main>
         <!-- Hero Section -->
-        <section class="hero-section">
-            <div class="container">
+        <section class="hero-section" style="background-image: url('../media/WhatsApp Image 2026-02-27 at 3.18.02 PM.jpeg');">
+            <div class="hero-overlay"></div>
+            <div class="container" style="position: relative; z-index: 2;">
                 <div class="hero-content">
                     <h2 class="hero-title">
                         <span data-i18n="hero.title1">Simple governance for </span>
-                        <span class="text-primary" data-i18n="hero.title2">every citizen.</span>
+                        <span class="hero-highlight" data-i18n="hero.title2">every citizen.</span>
                     </h2>
                     <p class="hero-subtitle" data-i18n="hero.subtitle">
                         Access village services, track budgets, and report issues directly from your phone or computer.
@@ -91,6 +92,30 @@
             </div>
         </section>
 
+        <!-- Media Showcase Section -->
+        <section class="media-showcase-section">
+            <div class="container">
+                <div class="media-header">
+                    <h2 class="section-title" data-i18n="media.title">Digital Village Transformation</h2>
+                    <p class="section-subtitle" data-i18n="media.subtitle">Witness the future of rural governance</p>
+                </div>
+                <div class="media-grid-container video-only">
+                    <div class="media-card video-card">
+                        <!-- Autoplay with sound requires user interaction on most modern browsers, 
+                             so we might need to be careful, but we will add the attributes requested -->
+                        <video id="promoVideo" autoplay loop playsinline class="showcase-video">
+                            <source src="../media/video_gs.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div class="media-overlay">
+                            <h3>Smart Infrastructure</h3>
+                            <p>Modernizing village facilities</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Services Section -->
         <section class="services-section">
             <div class="container">
@@ -120,8 +145,8 @@
             </div>
         </section>
 
-        <!-- Fund Usage Section -->
-        <section class="fund-section">
+        <!-- Fund Usage Section (Only visible when logged in) -->
+        <section class="fund-section" id="fundSection" style="display: none;">
             <div class="container">
                 <div class="fund-header">
                     <div>
@@ -179,17 +204,6 @@
             </div>
         </section>
 
-        <!-- Helpline Section -->
-        <section class="helpline-section">
-            <div class="container">
-                <p data-i18n="helpline.text">Need help? Call the toll-free helpline:</p>
-                <div class="helpline-number">
-                    <span class="material-symbols-outlined">call</span>
-                    <span>1800-111-2222</span>
-                </div>
-            </div>
-        </section>
-
         <!-- Portal Navigation -->
         <section class="portals-section">
             <div class="container">
@@ -209,11 +223,6 @@
                         <span class="material-symbols-outlined portal-icon">admin_panel_settings</span>
                         <h3 data-i18n="portal.admin">Admin Panel</h3>
                         <p data-i18n="portal.adminDesc">System management, oversight</p>
-                    </a>
-                    <a href="csc-portal.html" class="portal-card csc">
-                        <span class="material-symbols-outlined portal-icon">storefront</span>
-                        <h3 data-i18n="portal.csc">CSC Portal</h3>
-                        <p data-i18n="portal.cscDesc">Quick actions for operators</p>
                     </a>
                 </div>
             </div>
@@ -267,16 +276,50 @@
             const userMenu = document.getElementById('userMenu');
             const loginBtn = document.getElementById('loginBtn');
             const dashboardLink = document.getElementById('dashboardLink');
+            const fundSection = document.getElementById('fundSection');
+            const promoVideo = document.getElementById('promoVideo');
+            
+            // Try to play video with sound when scrolled into view
+            if (promoVideo) {
+                // Ensure the video is initially paused
+                promoVideo.pause();
+                
+                // Use IntersectionObserver to play when visible
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            // Video is in view, try to play it with sound
+                            promoVideo.muted = false;
+                            let playPromise = promoVideo.play();
+                            
+                            if (playPromise !== undefined) {
+                                playPromise.catch(error => {
+                                    console.log("Auto-play with sound blocked by browser policy. Falling back to muted autoplay.");
+                                    promoVideo.muted = true;
+                                    promoVideo.play();
+                                });
+                            }
+                        } else {
+                            // Pause when out of view to save resources
+                            promoVideo.pause();
+                        }
+                    });
+                }, { threshold: 0.5 }); // Trigger when 50% of the video is visible
+                
+                observer.observe(promoVideo);
+            }
             
             if (user) {
                 // User is logged in
                 userMenu.style.display = 'flex';
                 loginBtn.style.display = 'none';
                 dashboardLink.href = user.redirectUrl;
+                if (fundSection) fundSection.style.display = 'block';
             } else {
                 // User is not logged in
                 userMenu.style.display = 'none';
                 loginBtn.style.display = 'flex';
+                if (fundSection) fundSection.style.display = 'none';
             }
         });
     </script>
