@@ -493,149 +493,75 @@
     </header>
 
     <main class="verify-main">
-        <!-- Progress Card -->
-        <div class="progress-card">
-            <div class="progress-header">
-                <div>
-                    <p class="progress-label">Current Status</p>
-                    <p class="progress-title">AI Verification Progress</p>
-                </div>
-                <span class="progress-percent">85%</span>
-            </div>
-            <div class="progress-bar-container">
-                <div class="progress-bar-fill" style="width: 85%;"></div>
-            </div>
-            <div class="progress-meta">
-                <p>
-                    <span class="material-symbols-outlined">sync</span>
-                    ANALYZING UPLOADS...
-                </p>
-                <p>ESTIMATED TIME: 45 SEC</p>
-            </div>
+        <!-- Project Selector -->
+        <div style="margin-bottom: 2rem; display:flex; align-items:center; gap:1rem;">
+            <label style="font-weight:800; color:var(--text-primary)">Select Assigned Project:</label>
+            <select id="projectSelect" class="db-input" style="max-width:400px; padding:0.5rem" onchange="renderVerification()">
+                <option value="">Loading...</option>
+            </select>
         </div>
 
-        <!-- Project Info -->
-        <div class="project-info">
-            <div class="project-grid">
-                <div class="project-item">
-                    <label>Project ID</label>
-                    <p>RD-2024-0892</p>
+        <div id="verificationContent" style="display:none">
+            <!-- Progress Card -->
+            <div class="progress-card">
+                <div class="progress-header">
+                    <div>
+                        <p class="progress-label">Current Status</p>
+                        <p class="progress-title">Verification Progress</p>
+                    </div>
+                    <span class="progress-percent" id="progressText">0%</span>
                 </div>
-                <div class="project-item">
-                    <label>Work Type</label>
-                    <p>Road Construction</p>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="progressBar" style="width: 0%;"></div>
                 </div>
-                <div class="project-item">
-                    <label>Sanctioned Amount</label>
-                    <p>₹4,50,000</p>
-                </div>
-                <div class="project-item">
-                    <label>Deadline</label>
-                    <p>March 15, 2024</p>
+                <div class="progress-meta">
+                    <p id="progressStatusLabel">
+                        <span class="material-symbols-outlined">sync</span>
+                        AWAITING VERIFICATION
+                    </p>
+                    <p id="progressStepCount">0 / 4 STEPS COMPLETED</p>
                 </div>
             </div>
+
+            <!-- Project Info -->
+            <div class="project-info">
+                <div class="project-grid">
+                    <div class="project-item">
+                        <label>Assigned Contractor</label>
+                        <p id="infoContractor">—</p>
+                    </div>
+                    <div class="project-item">
+                        <label>Category</label>
+                        <p id="infoCategory">—</p>
+                    </div>
+                    <div class="project-item">
+                        <label>Sanctioned Amount</label>
+                        <p id="infoAmount">—</p>
+                    </div>
+                    <div class="project-item">
+                        <label>Start Date</label>
+                        <p id="infoDate">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checklist -->
+            <section class="checklist-section">
+                <div class="checklist-header">
+                    <span class="material-symbols-outlined">checklist</span>
+                    <h2>Verification Checklist</h2>
+                </div>
+                <div class="checklist" id="checklistContainer">
+                    <!-- Dynamic Checklist Items Inserted Here -->
+                </div>
+            </section>
         </div>
-
-        <!-- Checklist -->
-        <section class="checklist-section">
-            <div class="checklist-header">
-                <span class="material-symbols-outlined">checklist</span>
-                <h2>Verification Checklist</h2>
-            </div>
-
-            <div class="checklist">
-                <!-- Item 1 - Completed -->
-                <div class="check-item completed">
-                    <div class="check-status">
-                        <span class="material-symbols-outlined">check</span>
-                    </div>
-                    <div class="check-content">
-                        <h3>Before Work Photos</h3>
-                        <p>Upload at least 3 geo-tagged photos of the site before starting work.</p>
-                    </div>
-                    <div class="check-action">
-                        <span class="check-badge done">Verified</span>
-                        <span class="check-time">Uploaded 2 days ago</span>
-                    </div>
-                </div>
-
-                <!-- Item 2 - Completed -->
-                <div class="check-item completed">
-                    <div class="check-status">
-                        <span class="material-symbols-outlined">check</span>
-                    </div>
-                    <div class="check-content">
-                        <h3>During Work Video</h3>
-                        <p>Submit a 30-second video showing active construction progress.</p>
-                    </div>
-                    <div class="check-action">
-                        <span class="check-badge done">Verified</span>
-                        <span class="check-time">Uploaded yesterday</span>
-                    </div>
-                </div>
-
-                <!-- Item 3 - Pending -->
-                <div class="check-item pending">
-                    <div class="check-status">
-                        <span class="material-symbols-outlined">hourglass_empty</span>
-                    </div>
-                    <div class="check-content">
-                        <h3>After Work Photos</h3>
-                        <p>Upload final completion photos with geo-tags for verification.</p>
-                    </div>
-                    <div class="check-action">
-                        <span class="check-badge waiting">Pending Upload</span>
-                        <input type="file" id="photoUpload" accept="image/*" hidden>
-                        <button class="upload-btn" onclick="openUploader()">
-                        <span class="material-symbols-outlined">upload</span>
-                        Upload Now
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Item 4 - Not Started -->
-                <div class="check-item">
-                    <div class="check-status">
-                        <span class="material-symbols-outlined">radio_button_unchecked</span>
-                    </div>
-                    <div class="check-content">
-                        <h3>GPS Location Check</h3>
-                        <p>System will auto-verify work location matches registered site coordinates.</p>
-                    </div>
-                    <div class="check-action">
-                        <span class="check-badge ready">Awaiting Photos</span>
-                    </div>
-                </div>
-
-                <!-- Item 5 - Not Started -->
-                <div class="check-item">
-                    <div class="check-status">
-                        <span class="material-symbols-outlined">radio_button_unchecked</span>
-                    </div>
-                    <div class="check-content">
-                        <h3>Community Sign-off</h3>
-                        <p>At least 3 villagers must verify the work quality through the app.</p>
-                    </div>
-                    <div class="check-action">
-                        <span class="check-badge ready">Not Started</span>
-                    </div>
-                </div>
-
-                <!-- Item 6 - Not Started -->
-                <div class="check-item">
-                    <div class="check-status">
-                        <span class="material-symbols-outlined">radio_button_unchecked</span>
-                    </div>
-                    <div class="check-content">
-                        <h3>Final Audit Approval</h3>
-                        <p>Sarpanch and block officer final review and fund release authorization.</p>
-                    </div>
-                    <div class="check-action">
-                        <span class="check-badge ready">Not Started</span>
-                    </div>
-                </div>
-            </div>
-        </section>
+        
+        <div id="emptyState" style="text-align:center; padding: 4rem 2rem; background:white; border:2px dashed #cbd5e1; border-radius:1rem;">
+            <span class="material-symbols-outlined" style="font-size:3rem; color:#94a3b8; margin-bottom:1rem;">assignment_late</span>
+            <h3 style="font-size:1.25rem; font-weight:800; color:#475569">No Active Projects</h3>
+            <p style="color:#64748b; margin-top:0.5rem;">There are currently no assigned projects awaiting verification.</p>
+        </div>
     </main>
 
     <footer class="verify-footer">
@@ -643,90 +569,197 @@
             <span class="material-symbols-outlined">account_balance</span>
             <strong>GRAM-SABHA</strong>
         </div>
-        <p class="footer-text">© 2024 Digital Governance Division • Ministry of Rural Development</p>
+        <p class="footer-text">© <span class="copyright-year">2024</span> Digital Governance Division • Ministry of Rural Development</p>
         <div class="footer-links">
             <a href="#">Privacy</a>
             <a href="#">Support</a>
         </div>
     </footer>
-    <script>
-function openUploader() {
-  document.getElementById("photoUpload").click();
-}
 
-document.getElementById("photoUpload").addEventListener("change", async function () {
-  const file = this.files[0];
-  if (!file) return;
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const res = await fetch("http://localhost:5000/api/upload", {
-    method: "POST",
-    body: formData
-  });
-
-  const data = await res.json();
-
-  if (data.success) {
-    // ✅ Mark step as completed
-    localStorage.setItem("afterWorkUploaded", "true");
-
-    // 🔄 Refresh page
-    location.reload();
-  } else {
-    alert("Upload failed");
-  }
-});
-</script>
-<script>
-window.addEventListener("DOMContentLoaded", () => {
-  if (localStorage.getItem("afterWorkUploaded") === "true") {
-    const item = document.querySelector(".check-item.pending");
-
-    if (item) {
-      item.classList.remove("pending");
-      item.classList.add("completed");
-
-      item.querySelector(".check-badge").innerText = "Verified";
-      item.querySelector(".check-badge").classList.remove("waiting");
-      item.querySelector(".check-badge").classList.add("done");
-
-      item.querySelector(".upload-btn")?.remove();
-    }
-  }
-});
-</script>
-    <script src="js/app.js"></script>
+<script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
+<script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // AUTH GUARD: Redirect to login if not sarpanch
-            var user = GramSabha.requireAuth(['sarpanch']);
-            if (!user) return;
+<script>
+    var allProjects = [];
+    var verifySteps = [
+        { key: 'verifications_site_inspection', prop: 'verificationsSiteInspection', title: 'Site Inspection', desc: 'Physical inspection of the work site by Sarpanch or designated officer.' },
+        { key: 'verifications_photos', prop: 'verificationsPhotos', title: 'Site Photos & Documentation', desc: 'Verify and upload geo-tagged site images before and during work.' },
+        { key: 'verifications_materials', prop: 'verificationsMaterials', title: 'Material Quality Check', desc: 'Confirm materials used meet specified quality standards and quantity.' },
+        { key: 'verifications_gps', prop: 'verificationsGps', title: 'GPS Location Check', desc: 'System auto-verifies work coordinates against approved mapping.' },
+        { key: 'verifications_community', prop: 'verificationsCommunity', title: 'Community Sign-off', desc: 'Villagers digitally confirm work completion quality.' },
+        { key: 'verifications_audit', prop: 'verificationsAudit', title: 'Final Audit Approval', desc: 'Final review by Sarpanch and block officers.' }
+    ];
 
-            // Copyright year
-            document.querySelectorAll('.copyright-year').forEach(function(el) {
-                el.textContent = new Date().getFullYear();
-            });
-            // Fix hardcoded 2024 in footer
-            var footer = document.querySelector('.footer-text');
-            if (footer) {
-                footer.textContent = '© ' + new Date().getFullYear() + ' Digital Governance Division • Ministry of Rural Development';
-            }
+    document.addEventListener('DOMContentLoaded', async function() {
+        var user = GramSabha.requireAuth(['sarpanch']);
+        if (!user) return;
+
+        document.querySelectorAll('.copyright-year').forEach(function(el) {
+            el.textContent = new Date().getFullYear();
         });
 
-        // Wire all "Upload Now" buttons to file picker
-        document.querySelectorAll('.upload-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                document.getElementById('hiddenFileInput').click();
-            });
-        });
-        document.getElementById('hiddenFileInput').addEventListener('change', function(e) {
-            if (e.target.files.length > 0) {
-                GramSabha.showNotification('✅ ' + e.target.files.length + ' file(s) selected for upload. Processing...', 'success');
+        // Load Budget Projects
+        try {
+            var budget = await GramSabha.getBudget(user.villageId || user.village_id || 1);
+            if (budget && budget.projects) {
+                // Only show projects that have a contractor
+                allProjects = budget.projects.filter(p => p.contractor && p.contractor.length > 0 && p.status !== 'completed');
             }
+            populateSelect();
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+    function populateSelect() {
+        var sel = document.getElementById('projectSelect');
+        if (allProjects.length === 0) {
+            sel.innerHTML = '<option value="">No valid projects found</option>';
+            document.getElementById('verificationContent').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+            return;
+        }
+
+        sel.innerHTML = allProjects.map(p => '<option value="' + p.id + '">' + escapeHtml(p.name) + '</option>').join('');
+        
+        // Auto-select based on URL ?id= if exists
+        var params = new URLSearchParams(window.location.search);
+        var urlId = params.get('id');
+        if (urlId && allProjects.find(x => x.id == urlId)) {
+            sel.value = urlId;
+        } else {
+            // Explicitly set value to the first project so it renders immediately
+            sel.value = allProjects[0].id;
+        }
+        
+        renderVerification();
+    }
+
+    function renderVerification() {
+        var pid = document.getElementById('projectSelect').value;
+        var p = allProjects.find(x => x.id == pid);
+        if (!p) {
+            document.getElementById('verificationContent').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('verificationContent').style.display = 'block';
+
+        // Update Info Grid safely
+        try {
+            document.getElementById('infoContractor').textContent = p.contractor || '—';
+            document.getElementById('infoCategory').textContent = p.category || 'Infrastructure';
+            document.getElementById('infoAmount').textContent = GramSabha.formatCurrency ? GramSabha.formatCurrency(p.sanctioned) : '₹' + p.sanctioned;
+            document.getElementById('infoDate').textContent = p.start_date || new Date().toLocaleDateString();
+        } catch(e) { console.warn('Info update error:', e); }
+
+        // Count Progress
+        var completedCount = 0;
+        var checklistHtml = '';
+
+        verifySteps.forEach(function(step) {
+            var isDone = p[step.prop] === true;
+            if (isDone) completedCount++;
+
+            var statusClass = isDone ? 'completed' : 'pending';
+            var icon = isDone ? 'check' : 'radio_button_unchecked';
+            var badgeHtml = isDone 
+                ? '<span class="check-badge done">Verified</span>' 
+                : '<span class="check-badge ready">Pending</span>';
+
+            var btnHtml = isDone 
+                ? (p.verificationImages && p.verificationImages.length > 0 ? `<a href="${GramSabha.API_BASE}${p.verificationImages[p.verificationImages.length-1]}" target="_blank" class="upload-btn" style="background:#f1f5f9; color:var(--text); text-decoration:none;"><span class="material-symbols-outlined" style="color:var(--primary)">image</span> View Photo</a>` : '') 
+                : `<label for="file-${step.key}" class="upload-btn" style="cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem;">
+                     <span class="material-symbols-outlined">add_a_photo</span> Upload Photo
+                   </label>
+                   <input type="file" id="file-${step.key}" accept="image/*" style="display:none" onclick="localStorage.setItem('last_verified_project_id', ${p.id});" onchange="uploadVerificationPhoto(${p.id}, '${step.key}', this)">`;
+
+            checklistHtml += `
+                <div class="check-item ${statusClass}">
+                    <div class="check-status"><span class="material-symbols-outlined">${icon}</span></div>
+                    <div class="check-content">
+                        <h3>${step.title}</h3>
+                        <p>${step.desc}</p>
+                    </div>
+                    <div class="check-action">
+                        ${badgeHtml}
+                        ${btnHtml}
+                    </div>
+                </div>
+            `;
         });
-    </script>
+
+        document.getElementById('checklistContainer').innerHTML = checklistHtml;
+
+        var pct = ((completedCount / 6) * 100).toFixed(0);
+        document.getElementById('progressText').textContent = pct + '%';
+        document.getElementById('progressBar').style.width = pct + '%';
+        document.getElementById('progressStepCount').textContent = `${completedCount} / 6 STEPS COMPLETED`;
+        
+        var sl = document.getElementById('progressStatusLabel');
+        if (completedCount === 6) {
+            sl.innerHTML = '<span class="material-symbols-outlined">task_alt</span> FULLY VERIFIED';
+            sl.style.color = '#16a34a';
+        } else {
+            sl.innerHTML = '<span class="material-symbols-outlined">sync</span> IN PROGRESS (' + completedCount + '/6)';
+            sl.style.color = 'var(--primary)';
+        }
+    }
+
+    async function uploadVerificationPhoto(projectId, stepKey, inputEl) {
+        if (!inputEl.files || !inputEl.files[0]) return;
+        
+        var file = inputEl.files[0];
+        var formData = new FormData();
+        formData.append('file', file);
+        formData.append('project_id', projectId);
+        
+        var label = inputEl.previousElementSibling;
+        var originalHtml = label.innerHTML;
+        label.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span> Uploading...';
+        label.style.pointerEvents = 'none';
+        
+        try {
+            // 1. Upload the photo
+            var uploadRes = await fetch(GramSabha.API_BASE + '/api/upload', {
+                method: 'POST',
+                body: formData
+            }).then(r => r.json());
+            
+            if (!uploadRes.success) throw new Error(uploadRes.message || 'Upload failed');
+            
+            // 2. Verify step with photo URL
+            var updatedP = await GramSabha.verifyProjectStep(projectId, stepKey, uploadRes.path);
+            
+            // Update local state
+            var pIndex = allProjects.findIndex(x => x.id == projectId);
+            if (pIndex !== -1 && updatedP.data) {
+                // Merge the updated project data back into the local state
+                Object.assign(allProjects[pIndex], updatedP.data);
+                // Ensure verificationImages exists locally for immediate re-render
+                if (!allProjects[pIndex].verificationImages) allProjects[pIndex].verificationImages = [];
+                if (!allProjects[pIndex].verificationImages.includes(uploadRes.path)) {
+                    allProjects[pIndex].verificationImages.push(uploadRes.path);
+                }
+                GramSabha.showNotification('Photo uploaded & step verified!', 'success');
+                renderVerification();
+            }
+        } catch (err) {
+            console.error(err);
+            GramSabha.showNotification(err.message || 'Verification failed', 'error');
+            label.innerHTML = originalHtml;
+            label.style.pointerEvents = 'auto';
+            inputEl.value = ''; // Reset input
+        }
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, function(s){
+            return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s];
+        });
+    }
+</script>
 </body>
 </html>

@@ -34,7 +34,6 @@
                 <a href="pending-approvals.html" class="nav-item">
                     <span class="material-symbols-outlined">task_alt</span>
                     <span>Pending Approvals</span>
-                    <span class="nav-badge">5</span>
                 </a>
                 <a href="active-projects.html" class="nav-item active">
                     <span class="material-symbols-outlined">construction</span>
@@ -47,7 +46,6 @@
                 <a href="community-issues.html" class="nav-item">
                     <span class="material-symbols-outlined">campaign</span>
                     <span>Community Issues</span>
-                    <span class="nav-badge warning">12</span>
                 </a>
                 <a href="contractor-verification.html" class="nav-item">
                     <span class="material-symbols-outlined">verified</span>
@@ -80,7 +78,7 @@
                     <p>8 projects currently in progress</p>
                 </div>
                 <div class="header-actions">
-                    <button class="btn-primary" onclick="window.location.href='#new'">
+                    <button class="btn-primary" onclick="openNewProjectModal()">
                         <span class="material-symbols-outlined">add</span>
                         New Project
                     </button>
@@ -95,7 +93,7 @@
                             <span class="material-symbols-outlined">construction</span>
                         </div>
                         <div class="stat-content">
-                            <span class="stat-value">8</span>
+                            <span class="stat-value" id="statInProgress">—</span>
                             <span class="stat-label">In Progress</span>
                         </div>
                     </div>
@@ -104,7 +102,7 @@
                             <span class="material-symbols-outlined">pending</span>
                         </div>
                         <div class="stat-content">
-                            <span class="stat-value">3</span>
+                            <span class="stat-value" id="statPendingApproval">—</span>
                             <span class="stat-label">Pending Approval</span>
                         </div>
                     </div>
@@ -113,7 +111,7 @@
                             <span class="stat-icon-inner">✓</span>
                         </div>
                         <div class="stat-content">
-                            <span class="stat-value">12</span>
+                            <span class="stat-value" id="statCompleted">—</span>
                             <span class="stat-label">Completed This Year</span>
                         </div>
                     </div>
@@ -122,263 +120,235 @@
                             <span class="material-symbols-outlined">currency_rupee</span>
                         </div>
                         <div class="stat-content">
-                            <span class="stat-value">₹42.8L</span>
+                            <span class="stat-value" id="statTotalBudget">—</span>
                             <span class="stat-label">Total Budget</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Projects Grid -->
-                <div class="projects-grid">
-                    <!-- Project Card 1 -->
-                    <div class="project-card">
-                        <div class="project-header">
-                            <span class="project-category water">💧 Water Supply</span>
-                            <span class="project-status in-progress">In Progress</span>
-                        </div>
-                        <h3>Water Pipeline Extension - Ward 4</h3>
-                        <p>Installing 2km pipeline to connect 150 households to main water supply</p>
-                        <div class="project-progress">
-                            <div class="progress-info">
-                                <span>Progress</span>
-                                <span>72%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 72%;"></div>
-                            </div>
-                        </div>
-                        <div class="project-details">
-                            <div class="detail-row">
-                                <span class="label">Contractor</span>
-                                <span class="value">Sharma Constructions</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Budget</span>
-                                <span class="value">₹3,50,000</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Deadline</span>
-                                <span class="value">Mar 15, 2024</span>
-                            </div>
-                        </div>
-                        <div class="project-actions">
-                            <button class="btn-view" onclick="window.location.href='contractor-verification.html'">
-                                <span class="material-symbols-outlined">visibility</span>
-                                View Details
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Project Card 2 -->
-                    <div class="project-card">
-                        <div class="project-header">
-                            <span class="project-category roads">🛤️ Roads</span>
-                            <span class="project-status in-progress">In Progress</span>
-                        </div>
-                        <h3>School Road Repair</h3>
-                        <p>Repairing and resurfacing 500m road connecting school to main village</p>
-                        <div class="project-progress">
-                            <div class="progress-info">
-                                <span>Progress</span>
-                                <span>45%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 45%;"></div>
-                            </div>
-                        </div>
-                        <div class="project-details">
-                            <div class="detail-row">
-                                <span class="label">Contractor</span>
-                                <span class="value">Gupta Contractors</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Budget</span>
-                                <span class="value">₹2,25,000</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Deadline</span>
-                                <span class="value">Apr 10, 2024</span>
-                            </div>
-                        </div>
-                        <div class="project-actions">
-                            <button class="btn-view" onclick="window.location.href='contractor-verification.html'">
-                                <span class="material-symbols-outlined">visibility</span>
-                                View Details
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Project Card 3 -->
-                    <div class="project-card completed">
-                        <div class="project-header">
-                            <span class="project-category education">🏫 Education</span>
-                            <span class="project-status verification">Awaiting Verification</span>
-                        </div>
-                        <h3>School Boundary Wall</h3>
-                        <p>Construction of 200m boundary wall for primary school security</p>
-                        <div class="project-progress">
-                            <div class="progress-info">
-                                <span>Progress</span>
-                                <span>100%</span>
-                            </div>
-                            <div class="progress-bar complete">
-                                <div class="progress-fill" style="width: 100%;"></div>
-                            </div>
-                        </div>
-                        <div class="project-details">
-                            <div class="detail-row">
-                                <span class="label">Contractor</span>
-                                <span class="value">Devi Construction</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Budget</span>
-                                <span class="value">₹1,85,000</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Completed</span>
-                                <span class="value">Feb 28, 2024</span>
-                            </div>
-                        </div>
-                        <div class="project-actions">
-                            <button class="btn-verify" onclick="window.location.href='contractor-verification.html'">
-                                <span class="material-symbols-outlined">verified</span>
-                                Verify & Close
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Project Card 4 -->
-                    <div class="project-card">
-                        <div class="project-header">
-                            <span class="project-category sanitation">🚿 Sanitation</span>
-                            <span class="project-status in-progress">In Progress</span>
-                        </div>
-                        <h3>Community Toilet Block</h3>
-                        <p>Construction of 10-unit public toilet facility near bus stand</p>
-                        <div class="project-progress">
-                            <div class="progress-info">
-                                <span>Progress</span>
-                                <span>30%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 30%;"></div>
-                            </div>
-                        </div>
-                        <div class="project-details">
-                            <div class="detail-row">
-                                <span class="label">Contractor</span>
-                                <span class="value">Singh Builders</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Budget</span>
-                                <span class="value">₹4,50,000</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Deadline</span>
-                                <span class="value">May 30, 2024</span>
-                            </div>
-                        </div>
-                        <div class="project-actions">
-                            <button class="btn-view" onclick="window.location.href='contractor-verification.html'">
-                                <span class="material-symbols-outlined">visibility</span>
-                                View Details
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Project Card 5 -->
-                    <div class="project-card">
-                        <div class="project-header">
-                            <span class="project-category electricity">⚡ Electricity</span>
-                            <span class="project-status pending">Pending Start</span>
-                        </div>
-                        <h3>Street Light Installation - Ward 2</h3>
-                        <p>Installing 12 new LED street lights on main road</p>
-                        <div class="project-progress">
-                            <div class="progress-info">
-                                <span>Progress</span>
-                                <span>0%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 0%;"></div>
-                            </div>
-                        </div>
-                        <div class="project-details">
-                            <div class="detail-row">
-                                <span class="label">Contractor</span>
-                                <span class="value">To be assigned</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Budget</span>
-                                <span class="value">₹42,000</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Deadline</span>
-                                <span class="value">Apr 30, 2024</span>
-                            </div>
-                        </div>
-                        <div class="project-actions">
-                            <button class="btn-assign" onclick="window.location.href='contractors.html'">
-                                <span class="material-symbols-outlined">assignment_ind</span>
-                                Assign Contractor
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Project Card 6 -->
-                    <div class="project-card">
-                        <div class="project-header">
-                            <span class="project-category water">💧 Water Supply</span>
-                            <span class="project-status in-progress">In Progress</span>
-                        </div>
-                        <h3>Rainwater Harvesting System</h3>
-                        <p>Installing rainwater harvesting at 3 community buildings</p>
-                        <div class="project-progress">
-                            <div class="progress-info">
-                                <span>Progress</span>
-                                <span>60%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 60%;"></div>
-                            </div>
-                        </div>
-                        <div class="project-details">
-                            <div class="detail-row">
-                                <span class="label">Contractor</span>
-                                <span class="value">Green Solutions</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Budget</span>
-                                <span class="value">₹1,20,000</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Deadline</span>
-                                <span class="value">Mar 25, 2024</span>
-                            </div>
-                        </div>
-                        <div class="project-actions">
-                            <button class="btn-view" onclick="window.location.href='contractor-verification.html'">
-                                <span class="material-symbols-outlined">visibility</span>
-                                View Details
-                            </button>
-                        </div>
-                    </div>
+                <div class="projects-grid" id="activeProjectsGrid">
+                    <p style="color:var(--text-muted); padding: 2rem;">Loading project data...</p>
                 </div>
             </div>
         </main>
     </div>
 
+    <style>
+        /* New Project Modal Styles */
+        .db-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+            z-index: 9999; display: none; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .db-modal.show { display: flex; opacity: 1; }
+        .db-modal-content {
+            background: var(--white); width: 100%; max-width: 500px;
+            border-radius: 1rem; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            transform: translateY(20px); transition: transform 0.3s ease;
+        }
+        .db-modal.show .db-modal-content { transform: translateY(0); }
+        .db-modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .db-modal-head h2 { font-size: 1.25rem; font-weight: 700; color: #0f172a; }
+        .db-modal-close { background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer; }
+        .db-form-group { margin-bottom: 1.25rem; }
+        .db-form-label { display: block; font-size: 0.875rem; font-weight: 600; color: #334155; margin-bottom: 0.5rem; }
+        .db-input { width: 100%; padding: 0.75rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; font-family: inherit; font-size: 1rem; }
+        .db-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(34,197,94,0.1); }
+        .db-modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; }
+        .btn-cancel { padding: 0.75rem 1.5rem; background: #f1f5f9; color: #475569; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+        .btn-cancel:hover { background: #e2e8f0; }
+        .btn-submit { padding: 0.75rem 1.5rem; background: var(--primary); color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+        .btn-submit:hover { opacity: 0.9; }
+    </style>
+
+    <!-- New Project Modal -->
+    <div id="newProjectModal" class="db-modal">
+        <div class="db-modal-content">
+            <div class="db-modal-head">
+                <h2>Create New Project</h2>
+                <button class="db-modal-close" onclick="closeNewProjectModal()">&times;</button>
+            </div>
+            <form id="newProjectForm">
+                <div class="db-form-group">
+                    <label class="db-form-label">Project Name</label>
+                    <input type="text" id="projName" class="db-input" required placeholder="e.g. New School Boundary Wall">
+                </div>
+                <div class="db-form-group">
+                    <label class="db-form-label">Category</label>
+                    <select id="projCategory" class="db-input" required>
+                        <option value="water">Water Supply</option>
+                        <option value="roads">Roads & Paths</option>
+                        <option value="electricity">Electricity</option>
+                        <option value="sanitation">Sanitation</option>
+                        <option value="education">Education</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="db-form-group">
+                    <label class="db-form-label">Sanctioned Budget (₹)</label>
+                    <input type="number" id="projAmount" class="db-input" required placeholder="500000" min="1000">
+                </div>
+                <div class="db-modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeNewProjectModal()">Cancel</button>
+                    <button type="submit" class="btn-submit" id="projSubmitBtn">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
     <script src="js/app.js"></script>
-<script src="js/mobile.js"></script>
+    <script src="js/mobile.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             var user = GramSabha.requireAuth(['sarpanch']);
             if (!user) return;
             document.getElementById('sidebarUserName').textContent = user.name || '—';
             document.getElementById('sidebarAvatar').textContent = user.avatar || (user.name || '').split(' ').map(function(n) { return n[0]; }).join('').slice(0, 2).toUpperCase() || '—';
             var roleEl = document.querySelector('.sidebar-user-role');
             if (roleEl && user.village) roleEl.textContent = 'Sarpanch • ' + user.village;
+            
+            var villageId = user.villageId || user.village_id;
+            
+            // Define loader function
+            window.loadProjects = async function() {
+                try {
+                    var budget = await GramSabha.getBudget(villageId);
+                    if (budget) {
+                        var totalBudgetStr = GramSabha.formatCurrency(budget.totalReceived || 0);
+                        document.getElementById('statTotalBudget').textContent = totalBudgetStr;
+                        
+                        if (budget.projects) {
+                            var projects = budget.projects;
+                            
+                            var inProgress = projects.filter(p => (p.status||'').toLowerCase() === 'in_progress').length;
+                            var pending = projects.filter(p => (p.status||'').toLowerCase() === 'pending_approval' || (p.status||'').toLowerCase() === 'pending').length;
+                            var completed = projects.filter(p => (p.status||'').toLowerCase() === 'completed').length;
+                            
+                            document.getElementById('statInProgress').textContent = inProgress;
+                            document.getElementById('statPendingApproval').textContent = pending;
+                            document.getElementById('statCompleted').textContent = completed;
+                            
+                            var activeCountSpan = document.querySelector('.page-heading + p');
+                            if (activeCountSpan) activeCountSpan.textContent = projects.length + ' total project' + (projects.length !== 1 ? 's' : '');
+                            
+                            var gridEl = document.getElementById('activeProjectsGrid');
+                            if (projects.length === 0) {
+                                gridEl.innerHTML = '<div style="padding:4rem; text-align:center; color:var(--text-muted); grid-column:1/-1; background:white; border-radius:12px; border:1px dashed var(--border-color);">No active projects found.</div>';
+                            } else {
+                                gridEl.innerHTML = projects.map(function(p) {
+                                    var title = escapeHtml(p.name || p.title || 'Untitled Project');
+                                    var desc = escapeHtml(p.description || p.externalId || p.external_id || '');
+                                    var cName = escapeHtml(p.contractor || p.contractorName || 'To be assigned');
+                                    var amt = GramSabha.formatCurrency(p.sanctioned || p.amount || 0);
+                                    var prog = Math.round(p.progress || 0);
+                                    var cat = (p.category || 'other').toLowerCase();
+                                    var catNames = {'water':'Water Supply', 'roads':'Roads & Paths', 'electricity':'Electricity', 'sanitation':'Sanitation', 'education':'Education'};
+                                    var emojis = {'water':'💧', 'roads':'🛤️', 'electricity':'⚡', 'sanitation':'🚿', 'education':'🏫'};
+                                    
+                                    var displayCat = catNames[cat] || 'Other';
+                                    var emoji = emojis[cat] || '🏗️';
+                                    
+                                    var pStatus = (p.status || '').toLowerCase();
+                                    var statusLabel = 'In Progress';
+                                    var statusClass = 'in-progress';
+                                    var cardClass = 'project-card';
+                                    var actionHtml = '<button class="btn-view" onclick="window.location.href=\'contractor-verification.html\'"><span class="material-symbols-outlined">visibility</span> View Details</button>';
+                                    
+                                    if (pStatus === 'completed') {
+                                        statusLabel = 'Completed';
+                                        statusClass = 'success';
+                                        cardClass += ' completed';
+                                    } else if (pStatus === 'pending_approval') {
+                                        statusLabel = 'Awaiting Verification';
+                                        statusClass = 'verification';
+                                        actionHtml = '<button class="btn-verify" onclick="window.location.href=\'contractor-verification.html\'"><span class="material-symbols-outlined">verified</span> Verify & Close</button>';
+                                    } else if (pStatus === 'pending' || pStatus === 'approved') {
+                                        statusLabel = 'Pending Start';
+                                        statusClass = 'pending';
+                                        actionHtml = '<button class="btn-assign" onclick="window.location.href=\'contractors.html\'"><span class="material-symbols-outlined">assignment_ind</span> Assign Contractor</button>';
+                                    }
+                                    
+                                    return '<div class="' + cardClass + '">' +
+                                        '<div class="project-header">' +
+                                            '<span class="project-category ' + cat + '">' + emoji + ' ' + displayCat + '</span>' +
+                                            '<span class="project-status ' + statusClass + '">' + statusLabel + '</span>' +
+                                        '</div>' +
+                                        '<h3>' + title + '</h3>' +
+                                        '<p>' + desc + '</p>' +
+                                        '<div class="project-progress">' +
+                                            '<div class="progress-info">' +
+                                                '<span>Progress</span>' +
+                                                '<span>' + prog + '%</span>' +
+                                            '</div>' +
+                                            '<div class="progress-bar' + (prog === 100 ? ' complete' : '') + '">' +
+                                                '<div class="progress-fill" style="width: ' + prog + '%;"></div>' +
+                                            '</div>' +
+                                        '</div>' +
+                                        '<div class="project-details">' +
+                                            '<div class="detail-row">' +
+                                                '<span class="label">Contractor</span>' +
+                                                '<span class="value">' + cName + '</span>' +
+                                            '</div>' +
+                                            '<div class="detail-row">' +
+                                                '<span class="label">Budget</span>' +
+                                                '<span class="value">' + amt + '</span>' +
+                                            '</div>' +
+                                            '<div class="detail-row">' +
+                                                '<span class="label">Status</span>' +
+                                                '<span class="value">' + statusLabel + '</span>' +
+                                            '</div>' +
+                                        '</div>' +
+                                        '<div class="project-actions">' + actionHtml + '</div>' +
+                                    '</div>';
+                                }).join('');
+                            }
+                        }
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            };
+
+            // Load on init
+            loadProjects();
+
+            // Modal Logic
+            window.openNewProjectModal = function() {
+                document.getElementById('newProjectForm').reset();
+                document.getElementById('newProjectModal').classList.add('show');
+            };
+            window.closeNewProjectModal = function() {
+                document.getElementById('newProjectModal').classList.remove('show');
+            };
+            
+            // Form Submission
+            document.getElementById('newProjectForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var btn = document.getElementById('projSubmitBtn');
+                btn.disabled = true;
+                btn.textContent = 'Creating...';
+                
+                try {
+                    await GramSabha.createProject({
+                        name: document.getElementById('projName').value,
+                        category: document.getElementById('projCategory').value,
+                        sanctioned: document.getElementById('projAmount').value,
+                        village_id: villageId
+                    });
+                    
+                    GramSabha.showNotification('Project successfully verified and created!', 'success');
+                    closeNewProjectModal();
+                    await loadProjects();
+                } catch(err) {
+                    GramSabha.showNotification(err.message || 'Error saving project', 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Create Project';
+                }
+            });
         });
     </script>
 </body>

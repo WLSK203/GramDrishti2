@@ -622,17 +622,20 @@
                 <div class="media-section">
                     <label class="category-label">Add Photos or Videos (Optional)</label>
                     <div class="media-grid">
-                        <button class="media-btn">
+                        <button class="media-btn" id="photoBtnTrigger" type="button">
                             <span class="material-symbols-outlined">photo_camera</span>
                             <span>Take Photo</span>
                             <span>or upload from gallery</span>
                         </button>
-                        <button class="media-btn">
+                        <input type="file" id="photoFileInput" accept="image/*" multiple hidden>
+                        <button class="media-btn" id="videoBtnTrigger" type="button">
                             <span class="material-symbols-outlined">videocam</span>
                             <span>Record Video</span>
                             <span>max 30 seconds</span>
                         </button>
+                        <input type="file" id="videoFileInput" accept="video/*" hidden>
                     </div>
+                    <div id="filePreview" style="display:none; margin-top:1rem; display:flex; flex-wrap:wrap; gap:0.75rem;"></div>
                 </div>
 
                 <div class="description-section">
@@ -671,6 +674,75 @@
             });
         });
 
+        // === File Attachment Logic ===
+        var selectedFiles = [];
+
+        document.getElementById('photoBtnTrigger').addEventListener('click', function() {
+            document.getElementById('photoFileInput').click();
+        });
+
+        document.getElementById('videoBtnTrigger').addEventListener('click', function() {
+            document.getElementById('videoFileInput').click();
+        });
+
+        function handleFileSelect(e) {
+            var files = Array.from(e.target.files);
+            files.forEach(function(f) {
+                selectedFiles.push(f);
+            });
+            renderPreviews();
+        }
+
+        document.getElementById('photoFileInput').addEventListener('change', handleFileSelect);
+        document.getElementById('videoFileInput').addEventListener('change', handleFileSelect);
+
+        function renderPreviews() {
+            var container = document.getElementById('filePreview');
+            if (selectedFiles.length === 0) {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+            container.style.display = 'flex';
+            container.innerHTML = selectedFiles.map(function(f, i) {
+                var isImage = f.type.startsWith('image/');
+                var thumb = isImage
+                    ? '<img src="' + URL.createObjectURL(f) + '" style="width:80px;height:80px;object-fit:cover;border-radius:0.5rem;" alt="preview">'
+                    : '<div style="width:80px;height:80px;background:#f1f5f9;border-radius:0.5rem;display:flex;align-items:center;justify-content:center;"><span class="material-symbols-outlined" style="color:#64748b;font-size:2rem">videocam</span></div>';
+                return '<div style="position:relative;">' + thumb + 
+                    '<button onclick="removeFile(' + i + ')" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:0.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">&times;</button>' +
+                    '<p style="font-size:0.6rem;color:#64748b;max-width:80px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:0.25rem;">' + f.name + '</p>' +
+                '</div>';
+            }).join('');
+        }
+
+        window.removeFile = function(index) {
+            selectedFiles.splice(index, 1);
+            renderPreviews();
+        };
+
+        // === Upload helper ===
+        async function uploadFiles() {
+            var uploadedPaths = [];
+            for (var i = 0; i < selectedFiles.length; i++) {
+                var formData = new FormData();
+                formData.append('file', selectedFiles[i]);
+                try {
+                    var res = await fetch(GramSabha.apiBase + '/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    var data = await res.json();
+                    if (data.success) {
+                        uploadedPaths.push(data.path);
+                    }
+                } catch(err) {
+                    console.error('Upload failed for:', selectedFiles[i].name, err);
+                }
+            }
+            return uploadedPaths;
+        }
+
         // Submit issue to backend
         document.getElementById('submitIssueBtn').addEventListener('click', async function () {
             const user = GramSabha.requireAuth(['villager']);
@@ -679,8 +751,8 @@
             const selected = document.querySelector('.category-option.selected span:last-child');
             const categoryText = selected ? selected.textContent.trim().toLowerCase() : '';
             const categoryMap = {
-                'water': 'water',
-                'roads': 'roads',
+                'water supply': 'water',
+                'roads & paths': 'roads',
                 'electricity': 'electricity',
                 'sanitation': 'sanitation',
                 'education': 'education',
@@ -688,14 +760,25 @@
             };
             const category = categoryMap[categoryText] || 'other';
 
-            const titleInput = document.querySelector('.hero-title h1 span:last-child');
-            const title = titleInput ? titleInput.textContent.trim() || 'New Issue' : 'New Issue';
-
             const desc = document.getElementById('issueDescription').value.trim();
             const anonActive = document.getElementById('anonymousToggle').classList.contains('active');
             const locationText = document.querySelector('.location-text strong')?.textContent.trim() || null;
 
+            // Title from description or category
+            const title = desc.substring(0, 80) || (categoryText || 'New Issue');
+
+            // Disable button
+            var btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Submitting...';
+
             try {
+                // Upload any attached files first
+                var attachments = [];
+                if (selectedFiles.length > 0) {
+                    attachments = await uploadFiles();
+                }
+
                 const res = await GramSabha.apiPost('/api/issues', {
                     title,
                     description: desc,
@@ -704,16 +787,20 @@
                     reportedById: user.id,
                     location: locationText,
                     priority: 'normal',
-                    anonymous: anonActive
+                    anonymous: anonActive,
+                    attachments: attachments
                 });
                 if (res.success) {
-                    GramSabha.showNotification('Issue submitted successfully!', 'success');
+                    GramSabha.showNotification('\u2705 Issue submitted successfully!' + (attachments.length ? ' (' + attachments.length + ' file(s) attached)' : ''), 'success');
                     setTimeout(() => { window.location.href = 'villager-dashboard.html'; }, 1000);
                 } else {
                     GramSabha.showNotification(res.error || 'Issue submission failed', 'error');
                 }
             } catch (e) {
                 GramSabha.showNotification(e.message || 'Issue submission failed. Check backend.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined">send</span> Submit Issue Report';
             }
         });
     </script>

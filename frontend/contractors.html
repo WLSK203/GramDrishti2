@@ -229,6 +229,33 @@
       .ct-controls { flex-direction: column; align-items: stretch; }
       .ct-add-btn { margin-left: 0; }
     }
+
+    /* ── Modals ── */
+    .db-modal {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+        z-index: 9999; display: none; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 0.3s ease;
+    }
+    .db-modal.show { display: flex; opacity: 1; }
+    .db-modal-content {
+        background: var(--white); width: 100%; max-width: 500px;
+        border-radius: 1rem; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        transform: translateY(20px); transition: transform 0.3s ease;
+    }
+    .db-modal.show .db-modal-content { transform: translateY(0); }
+    .db-modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .db-modal-head h2 { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; }
+    .db-modal-close { background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer; padding: 0; }
+    .db-form-group { margin-bottom: 1.25rem; }
+    .db-form-label { display: block; font-size: 0.875rem; font-weight: 600; color: #334155; margin-bottom: 0.5rem; }
+    .db-input { width: 100%; padding: 0.75rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; font-family: inherit; font-size: 1rem; box-sizing: border-box; }
+    .db-input:focus { outline: none; border-color: var(--cn-green); box-shadow: 0 0 0 3px rgba(22,163,74,0.1); }
+    .db-modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; }
+    .btn-cancel { padding: 0.75rem 1.5rem; background: #f1f5f9; color: #475569; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+    .btn-cancel:hover { background: #e2e8f0; }
+    .btn-submit { padding: 0.75rem 1.5rem; background: var(--cn-green); color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+    .btn-submit:hover { opacity: 0.9; }
     </style>
 </head>
 <body class="admin-body">
@@ -256,7 +283,6 @@
             <a href="pending-approvals.html" class="nav-item">
                 <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
                 <span>Pending Approvals</span>
-                <span class="nav-badge" aria-label="5 pending">5</span>
             </a>
             <a href="active-projects.html" class="nav-item">
                 <span class="material-symbols-outlined" aria-hidden="true">construction</span>
@@ -269,7 +295,6 @@
             <a href="community-issues.html" class="nav-item">
                 <span class="material-symbols-outlined" aria-hidden="true">campaign</span>
                 <span>Community Issues</span>
-                <span class="nav-badge warning" aria-label="12 issues">12</span>
             </a>
             <a href="contractor-verification.html" class="nav-item">
                 <span class="material-symbols-outlined" aria-hidden="true">verified</span>
@@ -375,6 +400,48 @@
     </aside>
 </div>
 
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Assign Project Modal ── -->
+<div id="assignProjectModal" class="db-modal" aria-modal="true" role="dialog">
+    <div class="db-modal-content">
+        <div class="db-modal-head">
+            <h2>Assign Complaint to Contractor</h2>
+            <button class="db-modal-close" onclick="closeAssignModal()" aria-label="Close modal">&times;</button>
+        </div>
+        <form id="assignProjectForm">
+            <p style="font-size:0.875rem; color:#64748b; margin-bottom:1rem">
+                Assigning to contractor: <strong id="assigneeNameDisplay" style="color:#0f172a"></strong>
+            </p>
+            <!-- Complaint info box -->
+            <div id="assignIssueBox" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:.75rem;padding:1rem;margin-bottom:1.25rem;display:none">
+                <p style="font-size:.6875rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#16a34a;margin:0 0 .375rem">Complaint to be Assigned</p>
+                <p id="assignIssueTitle" style="font-size:.9375rem;font-weight:700;color:#0f172a;margin:0 0 .25rem"></p>
+                <p id="assignIssueDesc" style="font-size:.8125rem;color:#475569;margin:0 0 .75rem"></p>
+                
+                <div class="db-form-group" style="margin-bottom:0">
+                    <label class="db-form-label" style="font-size:.75rem">Fund Required (₹)</label>
+                    <input type="number" id="assignIssueFund" class="db-input" placeholder="e.g. 50000" min="1000" style="padding:.5rem;font-size:.875rem">
+                </div>
+            </div>
+            <!-- Fallback: manual project select when no issue in URL -->
+            <div id="assignProjectGroup" class="db-form-group" style="display:none">
+                <label class="db-form-label">Select Unassigned Project</label>
+                <select id="assignProjectSelect" class="db-input">
+                    <option value="">Loading projects...</option>
+                </select>
+            </div>
+            <div class="db-modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeAssignModal()">Cancel</button>
+                <button type="submit" class="btn-submit" id="assignSubmitBtn">Confirm Assignment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
 <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
@@ -471,6 +538,13 @@ var contractors = [
     },
 ];
 
+var savedCs = localStorage.getItem('gs_contractors');
+if (savedCs) {
+    try {
+        contractors = JSON.parse(savedCs);
+    } catch(e) {}
+}
+
 var currentFilter = 'all';
 var currentSearch = '';
 var currentSort   = 'rating';
@@ -493,6 +567,59 @@ document.addEventListener('DOMContentLoaded', function() {
 
     renderCards();
 
+    // Sync contractor stats from real DB on load
+    (async function syncContractorStats() {
+        try {
+            var villageId = user.villageId || user.village_id || 1;
+            var stat = document.getElementById('statTotalWork');
+            var bData = await GramSabha.getBudget(villageId);
+            if (bData && bData.projects) {
+                var totalWorkValue = 0;
+                contractors.forEach(function(c) {
+                    var myProjects = bData.projects.filter(function(p) { return p.contractor === c.name; });
+                    c.projects = myProjects.length;
+                    c.valueNum = myProjects.reduce(function(sum, p) { return sum + (p.sanctioned || 0); }, 0);
+                    c.value = GramSabha.formatCurrency(c.valueNum);
+                    totalWorkValue += c.valueNum;
+                });
+                localStorage.setItem('gs_contractors', JSON.stringify(contractors));
+                // Update the global total work stat if element exists
+                if (stat) stat.textContent = GramSabha.formatCurrency(totalWorkValue);
+                renderCards();
+            }
+        } catch(e) { console.warn('Contractor DB sync failed:', e); }
+    })();
+
+    // Detect ?issue= URL param (coming from sarpanch portal)
+    var urlParams = new URLSearchParams(window.location.search);
+    var issueParam = urlParams.get('issue');
+    if (issueParam) {
+        _currentIssueId = issueParam;
+        // Fetch issue details
+        var apiBase = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
+        fetch(apiBase + '/api/issues?village_id=' + (user.villageId || user.village_id || 1) + '&user_id=' + user.id)
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var allIssues = d.data || [];
+                _currentIssueData = allIssues.find(function(i) { return i.id === issueParam || String(i.numericId) === issueParam; });
+                // Show a top banner so sarpanch knows what they're assigning
+                var banner = document.createElement('div');
+                banner.style.cssText = 'background:#f0fdf4;border:2px solid #86efac;border-radius:1rem;padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap';
+                var issueTitle = (_currentIssueData && _currentIssueData.title) || issueParam;
+                var issueDesc  = (_currentIssueData && _currentIssueData.description) || '';
+                banner.innerHTML =
+                    '<div>' +
+                        '<p style="font-size:.6875rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#16a34a;margin:0 0 .25rem">Assigning Complaint</p>' +
+                        '<p style="font-size:1rem;font-weight:800;color:#0f172a;margin:0">' + issueTitle + '</p>' +
+                        (issueDesc ? '<p style="font-size:.8125rem;color:#475569;margin:.2rem 0 0">' + issueDesc + '</p>' : '') +
+                    '</div>' +
+                    '<a href="sarpanch-portal.html" style="font-size:.8125rem;font-weight:700;color:#64748b;white-space:nowrap">← Back</a>';
+                var mainEl = document.querySelector('.ct-main') || document.querySelector('main') || document.body;
+                mainEl.insertBefore(banner, mainEl.firstChild);
+            })
+            .catch(function(err) { console.warn('Could not fetch issue:', err); });
+    }
+
     /* Search */
     document.getElementById('searchInput').addEventListener('input', function() {
         currentSearch = this.value.toLowerCase();
@@ -514,9 +641,82 @@ document.addEventListener('DOMContentLoaded', function() {
         currentSort = this.value; renderCards();
     });
 
-    /* Add contractor */
+    /* Add contractor logic */
     document.getElementById('addContractorBtn').addEventListener('click', function() {
-        GramSabha.showNotification('📋 Add Contractor form — coming soon!', 'info');
+        document.getElementById('addContractorForm').reset();
+        document.getElementById('addContractorModal').classList.add('show');
+    });
+
+    window.closeAddModal = function() {
+        document.getElementById('addContractorModal').classList.remove('show');
+    };
+
+    document.getElementById('addContractorForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var cName = document.getElementById('addName').value.trim();
+        var cType = document.getElementById('addType').value.trim();
+        var cPhone = document.getElementById('addPhone').value.trim();
+        var cLoc = document.getElementById('addLocation').value.trim();
+        
+        var inits = cName.split(' ').map(function(n){return n[0]}).join('').substring(0,2).toUpperCase();
+        var newId = contractors.length ? Math.max(...contractors.map(c=>c.id)) + 1 : 1;
+        
+        contractors.unshift({
+            id: newId, initials: inits, name: cName, type: cType,
+            rating: 5.0, ratingCount: 0, projects: 0, value: '₹0', valueNum: 0,
+            onTime: 100, status: 'available',
+            specialties: [cType],
+            phone: cPhone, location: cLoc,
+            licenseNo: 'Pending Registration', gstNo: 'Pending',
+            gradient: 'linear-gradient(135deg,#047857,#10b981)',
+            banner: 'linear-gradient(90deg,#047857,#10b981)',
+            perfBadge: '🌟', perfTitle: 'New Registration',
+            completedProjects: []
+        });
+        
+        localStorage.setItem('gs_contractors', JSON.stringify(contractors));
+        closeAddModal();
+        renderCards();
+        GramSabha.showNotification('Contractor ' + escapeHtml(cName) + ' registered successfully!', 'success');
+    });
+
+    document.getElementById('assignProjectForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var projId = document.getElementById('assignProjectSelect').value;
+        if (!projId) return;
+        
+        var btn = document.getElementById('assignSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Assigning...';
+        
+        try {
+            await GramSabha.assignProject(projId, window.currentAssignee);
+            // Sync contractor stats from real DB data
+            var c = contractors.find(x => x.name === window.currentAssignee);
+            if (c) {
+                c.status = 'busy';
+                // Recalculate projects + value from DB
+                try {
+                    var userSess = GramSabha.getCurrentUser() || JSON.parse(localStorage.getItem('gram_sabha_session') || '{}');
+                    var bData = await GramSabha.getBudget(userSess.villageId || userSess.village_id || 1);
+                    if (bData && bData.projects) {
+                        var myProjects = bData.projects.filter(p => p.contractor === c.name);
+                        c.projects = myProjects.length;
+                        c.valueNum = myProjects.reduce(function(sum, p) { return sum + (p.sanctioned || 0); }, 0);
+                        c.value = GramSabha.formatCurrency(c.valueNum);
+                    }
+                } catch(_) {}
+                localStorage.setItem('gs_contractors', JSON.stringify(contractors));
+            }
+            GramSabha.showNotification('Successfully assigned to ' + window.currentAssignee, 'success');
+            closeAssignModal();
+            renderCards();
+        } catch(err) {
+            GramSabha.showNotification(err.message || 'Assignment failed', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Confirm Assignment';
+        }
     });
 });
 
@@ -603,7 +803,7 @@ function renderCards() {
               '<span class="material-symbols-outlined" aria-hidden="true">person_search</span>Profile' +
             '</button>' +
             (isAvail
-              ? '<button class="ct-btn-assign" onclick="assignProject(\'' + escapeHtml(c.name) + '\')" aria-label="Assign project to ' + escapeHtml(c.name) + '">' +
+              ? '<button class="ct-btn-assign" onclick="window.assignProject(\'' + escapeHtml(c.name) + '\')" aria-label="Assign project to ' + escapeHtml(c.name) + '">' +
                   '<span class="material-symbols-outlined" aria-hidden="true">assignment</span>Assign' +
                 '</button>'
               : '<button class="ct-btn-assign busy-btn" disabled aria-label="' + escapeHtml(c.name) + ' is busy">' +
@@ -664,7 +864,7 @@ function openProfile(id) {
           }).join('') +
         '</div>' +
         (c.status === 'available'
-          ? '<button onclick="assignProject(\''+escapeHtml(c.name)+'\');closeDrawer();" style="width:100%;padding:.875rem;background:linear-gradient(135deg,#16a34a,#22c55e);color:white;border:none;border-radius:.875rem;font-size:.9375rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:.5rem">'+
+          ? '<button onclick="window.assignProject(\''+escapeHtml(c.name)+'\');closeDrawer();" style="width:100%;padding:.875rem;background:linear-gradient(135deg,#16a34a,#22c55e);color:white;border:none;border-radius:.875rem;font-size:.9375rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:.5rem">'+
               '<span class="material-symbols-outlined" style="font-size:1.125rem">assignment</span>Assign Project to ' + escapeHtml(c.name) + '</button>'
           : '<div style="padding:1rem;background:#fef3c7;border-radius:.875rem;text-align:center;font-size:.875rem;font-weight:700;color:#92400e">Currently on an active project — not available for new assignment</div>'
         );
@@ -684,11 +884,115 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeDrawer();
 });
 
-/* ── Assign ── */
-function assignProject(name) {
-    GramSabha.showNotification('📋 Opening assignment for: ' + name, 'success');
-    setTimeout(function(){ window.location.href = 'community-issues.html'; }, 1200);
-}
+/* ── Assign Logic ── */
+var _currentIssueId = null;   // Set when arriving from ?issue=
+var _currentIssueData = null;
+
+window.currentAssignee = '';
+window.assignProject = async function(name) {
+    window.currentAssignee = name;
+    document.getElementById('assigneeNameDisplay').textContent = name;
+    document.getElementById('assignProjectModal').classList.add('show');
+
+    var issueBox   = document.getElementById('assignIssueBox');
+    var projGroup  = document.getElementById('assignProjectGroup');
+    var sel        = document.getElementById('assignProjectSelect');
+
+    if (_currentIssueId && _currentIssueData) {
+        // Got here via sarpanch dashboard — show the complaint
+        issueBox.style.display  = 'block';
+        projGroup.style.display = 'none';
+        document.getElementById('assignIssueTitle').textContent = _currentIssueData.title || _currentIssueId;
+        document.getElementById('assignIssueDesc').textContent  = _currentIssueData.description || 'No description';
+        document.getElementById('assignIssueFund').required = true;
+        document.getElementById('assignProjectSelect').required = false;
+    } else {
+        // Generic: pick from unassigned budget projects
+        issueBox.style.display  = 'none';
+        projGroup.style.display = 'block';
+        document.getElementById('assignIssueFund').required = false;
+        document.getElementById('assignProjectSelect').required = true;
+        sel.innerHTML = '<option value="">Loading projects...</option>';
+        try {
+            var userSession = GramSabha.getCurrentUser() || JSON.parse(localStorage.getItem('gram_sabha_session') || '{}');
+            var villageId   = userSession.villageId || userSession.village_id || 1;
+            var budgetData  = await GramSabha.getBudget(villageId);
+            if (budgetData && budgetData.projects) {
+                var unassigned = budgetData.projects.filter(function(p) {
+                    return !p.contractor && (p.status === 'pending' || p.status === 'approved' || p.status === 'pending_approval' || p.status === 'in_progress');
+                });
+                sel.innerHTML = unassigned.length
+                    ? unassigned.map(function(p) { return '<option value="' + p.id + '">' + p.name + ' (' + GramSabha.formatCurrency(p.sanctioned) + ')</option>'; }).join('')
+                    : '<option value="">No unassigned projects available</option>';
+            }
+        } catch(err) {
+            sel.innerHTML = '<option value="">Error loading projects</option>';
+        }
+    }
+};
+
+document.getElementById('assignProjectForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var btn = document.getElementById('assignSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Assigning...';
+    var apiBase = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
+    try {
+        if (_currentIssueId) {
+            // Issue-based assignment → call new endpoint
+            var fundReq = document.getElementById('assignIssueFund').value;
+            var res = await fetch(apiBase + '/api/issues/' + _currentIssueId + '/assign_contractor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    contractor_name: window.currentAssignee,
+                    sanctioned_amount: parseInt(fundReq) || 0
+                })
+            });
+            var data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Assignment failed');
+        } else {
+            // Project-based assignment
+            var projId = document.getElementById('assignProjectSelect').value;
+            if (!projId) { GramSabha.showNotification('Please select a project', 'error'); btn.disabled = false; btn.textContent = 'Confirm Assignment'; return; }
+            await GramSabha.assignProject(projId, window.currentAssignee);
+        }
+
+        // Sync contractor stats
+        var c = contractors.find(function(x) { return x.name === window.currentAssignee; });
+        if (c) {
+            c.status = 'busy';
+            try {
+                var userSess = GramSabha.getCurrentUser() || JSON.parse(localStorage.getItem('gram_sabha_session') || '{}');
+                var bData = await GramSabha.getBudget(userSess.villageId || userSess.village_id || 1);
+                if (bData && bData.projects) {
+                    var myProjects = bData.projects.filter(function(p) { return p.contractor === c.name; });
+                    c.projects  = myProjects.length;
+                    c.valueNum  = myProjects.reduce(function(s, p) { return s + (p.sanctioned || 0); }, 0);
+                    c.value     = GramSabha.formatCurrency(c.valueNum);
+                }
+            } catch(_) {}
+            localStorage.setItem('gs_contractors', JSON.stringify(contractors));
+        }
+
+        GramSabha.showNotification('✅ Successfully assigned to ' + window.currentAssignee, 'success');
+        closeAssignModal();
+        renderCards();
+        // If we came from a specific issue, go back to sarpanch portal
+        if (_currentIssueId) {
+            setTimeout(function() { window.location.href = 'sarpanch-portal.html'; }, 1200);
+        }
+    } catch(err) {
+        GramSabha.showNotification(err.message || 'Assignment failed', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirm Assignment';
+    }
+});
+
+window.closeAssignModal = function() {
+    document.getElementById('assignProjectModal').classList.remove('show');
+};
 </script>
 </body>
 </html>

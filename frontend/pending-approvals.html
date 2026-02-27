@@ -34,7 +34,6 @@
                 <a href="pending-approvals.html" class="nav-item active">
                     <span class="material-symbols-outlined">task_alt</span>
                     <span>Pending Approvals</span>
-                    <span class="nav-badge">5</span>
                 </a>
                 <a href="active-projects.html" class="nav-item">
                     <span class="material-symbols-outlined">construction</span>
@@ -47,7 +46,6 @@
                 <a href="community-issues.html" class="nav-item">
                     <span class="material-symbols-outlined">campaign</span>
                     <span>Community Issues</span>
-                    <span class="nav-badge warning">12</span>
                 </a>
                 <a href="contractor-verification.html" class="nav-item">
                     <span class="material-symbols-outlined">verified</span>
@@ -90,187 +88,8 @@
 
             <div class="admin-content">
                 <!-- Approvals List -->
-                <div class="approvals-list">
-                    <!-- Approval Card 1 -->
-                    <div class="approval-card urgent">
-                        <div class="approval-priority">
-                            <span class="priority-badge urgent">Urgent</span>
-                            <span class="approval-date">Submitted 2 days ago</span>
-                        </div>
-                        <div class="approval-content">
-                            <div class="approval-icon fund">
-                                <span class="material-symbols-outlined">payments</span>
-                            </div>
-                            <div class="approval-details">
-                                <span class="approval-type">Fund Release Request</span>
-                                <h3>Water Pipeline - Phase 2 Payment</h3>
-                                <p>₹85,000 requested by Sharma Constructions for pipeline installation work in Ward 4</p>
-                                <div class="approval-meta">
-                                    <span><span class="material-symbols-outlined">business</span> Sharma Constructions</span>
-                                    <span><span class="material-symbols-outlined">folder</span> PRJ-2024-1089</span>
-                                    <span><span class="material-symbols-outlined">receipt_long</span> PFMS Verified</span>
-                                </div>
-                            </div>
-                            <div class="approval-amount">
-                                <span class="label">Amount</span>
-                                <span class="value">₹85,000</span>
-                            </div>
-                        </div>
-                        <div class="approval-actions">
-                            <button class="btn-reject" onclick="rejectApproval(this)">
-                                <span class="material-symbols-outlined">close</span>
-                                Reject
-                            </button>
-                            <button class="btn-approve" onclick="approveApproval(this, 'PRJ-2024-1089')">
-                                <span class="material-symbols-outlined">check</span>
-                                Approve Release
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Approval Card 2 -->
-                    <div class="approval-card">
-                        <div class="approval-priority">
-                            <span class="priority-badge normal">Normal</span>
-                            <span class="approval-date">Submitted 3 days ago</span>
-                        </div>
-                        <div class="approval-content">
-                            <div class="approval-icon verification">
-                                <span class="material-symbols-outlined">verified</span>
-                            </div>
-                            <div class="approval-details">
-                                <span class="approval-type">Work Verification</span>
-                                <h3>School Boundary Wall - Final Inspection</h3>
-                                <p>Project completed. Community sign-off and final verification required for project closure.</p>
-                                <div class="approval-meta">
-                                    <span><span class="material-symbols-outlined">business</span> Devi Construction</span>
-                                    <span><span class="material-symbols-outlined">folder</span> PRJ-2024-0892</span>
-                                    <span><span class="material-symbols-outlined">check_circle</span> 100% Complete</span>
-                                </div>
-                            </div>
-                            <div class="approval-amount">
-                                <span class="label">Project Value</span>
-                                <span class="value">₹1,85,000</span>
-                            </div>
-                        </div>
-                        <div class="approval-actions">
-                            <button class="btn-review" onclick="window.location.href='contractor-verification.html'">
-                                <span class="material-symbols-outlined">visibility</span>
-                                Review Work
-                            </button>
-                            <button class="btn-approve" onclick="approveApproval(this)">
-                                <span class="material-symbols-outlined">check</span>
-                                Approve Closure
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Approval Card 3 -->
-                    <div class="approval-card">
-                        <div class="approval-priority">
-                            <span class="priority-badge high">High</span>
-                            <span class="approval-date">Submitted 4 days ago</span>
-                        </div>
-                        <div class="approval-content">
-                            <div class="approval-icon fund">
-                                <span class="material-symbols-outlined">payments</span>
-                            </div>
-                            <div class="approval-details">
-                                <span class="approval-type">Fund Release Request</span>
-                                <h3>School Road Repair - Initial Payment</h3>
-                                <p>₹45,000 advance payment for road repair materials and labor mobilization</p>
-                                <div class="approval-meta">
-                                    <span><span class="material-symbols-outlined">business</span> Gupta Contractors</span>
-                                    <span><span class="material-symbols-outlined">folder</span> PRJ-2024-0956</span>
-                                    <span><span class="material-symbols-outlined">pending</span> Work Started</span>
-                                </div>
-                            </div>
-                            <div class="approval-amount">
-                                <span class="label">Amount</span>
-                                <span class="value">₹45,000</span>
-                            </div>
-                        </div>
-                        <div class="approval-actions">
-                            <button class="btn-reject" onclick="rejectApproval(this)">
-                                <span class="material-symbols-outlined">close</span>
-                                Reject
-                            </button>
-                            <button class="btn-approve" onclick="approveApproval(this, 'PRJ-2024-0892')">
-                                <span class="material-symbols-outlined">check</span>
-                                Approve Release
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Approval Card 4 -->
-                    <div class="approval-card">
-                        <div class="approval-priority">
-                            <span class="priority-badge normal">Normal</span>
-                            <span class="approval-date">Submitted 5 days ago</span>
-                        </div>
-                        <div class="approval-content">
-                            <div class="approval-icon issue">
-                                <span class="material-symbols-outlined">campaign</span>
-                            </div>
-                            <div class="approval-details">
-                                <span class="approval-type">Issue Escalation</span>
-                                <h3>Street Light Installation - Ward 2</h3>
-                                <p>Community requested 12 new LED street lights. 89 villagers have voted in support.</p>
-                                <div class="approval-meta">
-                                    <span><span class="material-symbols-outlined">location_on</span> Ward 2, Main Road</span>
-                                    <span><span class="material-symbols-outlined">how_to_vote</span> 89 Votes</span>
-                                    <span><span class="material-symbols-outlined">currency_rupee</span> Est. ₹42,000</span>
-                                </div>
-                            </div>
-                            <div class="approval-amount">
-                                <span class="label">Estimated</span>
-                                <span class="value">₹42,000</span>
-                            </div>
-                        </div>
-                        <div class="approval-actions">
-                            <button class="btn-reject" onclick="rejectApproval(this)">
-                                <span class="material-symbols-outlined">close</span>
-                                Reject
-                            </button>
-                            <button class="btn-approve" onclick="approveApproval(this)">
-                                <span class="material-symbols-outlined">check</span>
-                                Approve Project
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Approval Card 5 -->
-                    <div class="approval-card">
-                        <div class="approval-priority">
-                            <span class="priority-badge high">High</span>
-                            <span class="approval-date">Submitted 1 week ago</span>
-                        </div>
-                        <div class="approval-content">
-                            <div class="approval-icon issue">
-                                <span class="material-symbols-outlined">warning</span>
-                            </div>
-                            <div class="approval-details">
-                                <span class="approval-type">Emergency Issue</span>
-                                <h3>Broken Hand Pump - Ward 4</h3>
-                                <p>142 villagers affected. Urgent repair needed for drinking water supply.</p>
-                                <div class="approval-meta">
-                                    <span><span class="material-symbols-outlined">location_on</span> Near Hanuman Temple</span>
-                                    <span><span class="material-symbols-outlined">how_to_vote</span> 142 Votes</span>
-                                    <span><span class="material-symbols-outlined">groups</span> 50 Families</span>
-                                </div>
-                            </div>
-                            <div class="approval-amount">
-                                <span class="label">Priority</span>
-                                <span class="value urgent-text">Urgent</span>
-                            </div>
-                        </div>
-                        <div class="approval-actions">
-                            <button class="btn-assign" onclick="assignIssue(this)">
-                                <span class="material-symbols-outlined">assignment_ind</span>
-                                Assign Contractor
-                            </button>
-                        </div>
-                    </div>
+                <div class="approvals-list" id="pendingFeedContainer">
+                    <p style="color:var(--text-muted); padding: 2rem; text-align: center;">Loading pending items...</p>
                 </div>
             </div>
         </main>
@@ -280,12 +99,77 @@
     <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             const user = GramSabha.requireAuth(['sarpanch']);
             if (!user) return;
             
             document.getElementById('sidebarUserName').textContent = user.name;
             document.getElementById('sidebarAvatar').textContent = user.avatar;
+            
+            var villageId = user.villageId || user.village_id;
+            try {
+                var issues = await GramSabha.getIssues(villageId);
+                var feedEl = document.getElementById('pendingFeedContainer');
+                
+                if (issues) {
+                    var pendingIssues = issues.filter(function(i) {
+                        return (i.status || '').toLowerCase() === 'submitted';
+                    });
+                    
+                    if (pendingIssues.length === 0) {
+                        feedEl.innerHTML = '<div style="padding: 3rem; text-align: center; color: var(--text-muted); background: white; border-radius: 12px; border: 1px dashed var(--border-color);">' +
+                            '<span class="material-symbols-outlined" style="font-size: 3rem; margin-bottom: 0.5rem; opacity: 0.5;">check_circle</span><br>No pending approvals or unassigned issues.</div>';
+                    } else {
+                        var icons = { 'water': 'water_drop', 'roads': 'edit_road', 'electricity': 'bolt', 'sanitation': 'delete', 'education': 'school' };
+                        
+                        feedEl.innerHTML = pendingIssues.map(function(i) {
+                            var cat = (i.category || '').toLowerCase();
+                            var catName = escapeHtml(i.categoryName || i.category || 'Other');
+                            var title = escapeHtml(i.title || 'Untitled');
+                            var icon = icons[cat] || 'campaign';
+                            var dateStr = GramSabha.formatDate(i.reportedDate || i.createdAt);
+                            var votes = i.votes || 0;
+                            var location = escapeHtml(i.location || '—');
+                            var desc = escapeHtml(i.description || 'No description provided.');
+                            var pClass = i.priority === 'urgent' ? 'urgent' : (i.priority === 'high' ? 'high' : 'normal');
+                            var pText = i.priority === 'urgent' ? 'Urgent' : (i.priority === 'high' ? 'High' : 'Normal');
+
+                            return '<div class="approval-card">' +
+                                '<div class="approval-priority">' +
+                                    '<span class="priority-badge ' + pClass + '">' + pText + '</span>' +
+                                    '<span class="approval-date">Submitted ' + dateStr + '</span>' +
+                                '</div>' +
+                                '<div class="approval-content">' +
+                                    '<div class="approval-icon issue">' +
+                                        '<span class="material-symbols-outlined">' + icon + '</span>' +
+                                    '</div>' +
+                                    '<div class="approval-details">' +
+                                        '<span class="approval-type">Issue Reported</span>' +
+                                        '<h3>' + title + ' - ' + location + '</h3>' +
+                                        '<p>' + desc + '</p>' +
+                                        '<div class="approval-meta">' +
+                                            '<span><span class="material-symbols-outlined">location_on</span> ' + location + '</span>' +
+                                            '<span><span class="material-symbols-outlined">how_to_vote</span> ' + votes + ' Votes</span>' +
+                                        '</div>' +
+                                    '</div>' +
+                                    '<div class="approval-amount">' +
+                                        '<span class="label">Priority</span>' +
+                                        '<span class="value ' + (i.priority === 'urgent' ? 'urgent-text' : '') + '">' + pText + '</span>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div class="approval-actions">' +
+                                    '<button class="btn-assign" onclick="assignIssue(this, \'' + i.id + '\')">' +
+                                        '<span class="material-symbols-outlined">assignment_ind</span>' +
+                                        'Assign Contractor' +
+                                    '</button>' +
+                                '</div>' +
+                            '</div>';
+                        }).join('');
+                    }
+                }
+            } catch(e) {
+                document.getElementById('pendingFeedContainer').innerHTML = '<p style="color:red; text-align:center;">Failed to load data.</p>';
+            }
         });
         
         async function approveApproval(btn, projectId) {

@@ -41,7 +41,6 @@
         <a href="pending-approvals.html" class="sp-nav-item">
             <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
             Pending Approvals
-            <span class="sp-nav-badge" aria-label="5 pending approvals">5</span>
         </a>
         <a href="active-projects.html" class="sp-nav-item">
             <span class="material-symbols-outlined" aria-hidden="true">construction</span>
@@ -54,7 +53,6 @@
         <a href="community-issues.html" class="sp-nav-item">
             <span class="material-symbols-outlined" aria-hidden="true">campaign</span>
             Community Issues
-            <span class="sp-nav-badge issues" aria-label="12 community issues">12</span>
         </a>
 
         <p class="sp-nav-section">Operations</p>
@@ -173,7 +171,7 @@
                     </span>
                 </div>
                 <div>
-                    <p class="sp-stat-num">8</p>
+                    <p class="sp-stat-num" id="spActiveProjCount">—</p>
                     <p class="sp-stat-label">Active Projects</p>
                 </div>
             </div>
@@ -182,13 +180,13 @@
                     <div class="sp-stat-icon blue" aria-hidden="true">
                         <span class="material-symbols-outlined">campaign</span>
                     </div>
-                    <span class="sp-stat-trend warn">
+                    <span class="sp-stat-trend warn" id="dashboardOpenIssuesTrend">
                         <span class="material-symbols-outlined">priority_high</span>
-                        12 Open
+                        — Open
                     </span>
                 </div>
                 <div>
-                    <p class="sp-stat-num">12</p>
+                    <p class="sp-stat-num" id="dashboardOpenIssuesCount">—</p>
                     <p class="sp-stat-label">Community Issues</p>
                 </div>
             </div>
@@ -197,9 +195,9 @@
                     <div class="sp-stat-icon red" aria-hidden="true">
                         <span class="material-symbols-outlined">savings</span>
                     </div>
-                    <span class="sp-stat-trend up">
+                    <span class="sp-stat-trend up" id="budgetTrend">
                         <span class="material-symbols-outlined">trending_up</span>
-                        70% Used
+                        0% Used
                     </span>
                 </div>
                 <div>
@@ -229,76 +227,10 @@
                     </div>
                 </div>
 
-                <!-- Urgent: Fund Release -->
-                <article class="sp-approval-card urgent" aria-label="Approval: Water Pipeline payment">
-                    <div class="sp-approval-top">
-                        <span class="sp-approval-type">Fund Release</span>
-                        <span class="sp-approval-priority urgent">
-                            <span class="material-symbols-outlined" aria-hidden="true">priority_high</span>
-                            Urgent
-                        </span>
-                    </div>
-                    <div class="sp-approval-body">
-                        <h3 class="sp-approval-title">Water Pipeline — Phase 2 Payment</h3>
-                        <p class="sp-approval-sub">₹85,000 requested by Sharma Constructions · Submitted 2 days ago</p>
-                        <div class="sp-approval-actions">
-                            <button class="sp-btn approve" onclick="handleApprove(this, 'Fund release approved!')" aria-label="Approve fund release">
-                                <span class="material-symbols-outlined" aria-hidden="true">check</span>
-                                Approve ₹85,000
-                            </button>
-                            <button class="sp-btn reject" onclick="handleReject(this, 'Fund release rejected')" aria-label="Reject fund release">
-                                <span class="material-symbols-outlined" aria-hidden="true">close</span>
-                                Reject
-                            </button>
-                        </div>
-                    </div>
-                </article>
-
-                <!-- High: Issue Escalation -->
-                <article class="sp-approval-card high" aria-label="Approval: Hand Pump issue escalation">
-                    <div class="sp-approval-top">
-                        <span class="sp-approval-type">Issue Escalation</span>
-                        <span class="sp-approval-priority high">
-                            <span class="material-symbols-outlined" aria-hidden="true">warning</span>
-                            High
-                        </span>
-                    </div>
-                    <div class="sp-approval-body">
-                        <h3 class="sp-approval-title">Broken Hand Pump — Ward 4</h3>
-                        <p class="sp-approval-sub">142 villagers voted for priority resolution · Reported 5 days ago</p>
-                        <div class="sp-approval-actions">
-                            <button class="sp-btn assign" onclick="GramSabha.showNotification('Issue assigned to Water Department', 'success')" aria-label="Assign to department">
-                                <span class="material-symbols-outlined" aria-hidden="true">assignment_ind</span>
-                                Assign to Dept.
-                            </button>
-                            <a href="community-issues.html" class="sp-btn review" aria-label="Review issue details">
-                                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-                                View Details
-                            </a>
-                        </div>
-                    </div>
-                </article>
-
-                <!-- Normal: Work Verification -->
-                <article class="sp-approval-card normal" aria-label="Approval: School Boundary Wall verification">
-                    <div class="sp-approval-top">
-                        <span class="sp-approval-type">Work Verification</span>
-                        <span class="sp-approval-priority normal">
-                            <span class="material-symbols-outlined" aria-hidden="true">info</span>
-                            Normal
-                        </span>
-                    </div>
-                    <div class="sp-approval-body">
-                        <h3 class="sp-approval-title">School Boundary Wall — Final Inspection</h3>
-                        <p class="sp-approval-sub">Community sign-off required for project closure · Devi Construction</p>
-                        <div class="sp-approval-actions">
-                            <a href="contractor-verification.html" class="sp-btn review" aria-label="Review verification">
-                                <span class="material-symbols-outlined" aria-hidden="true">fact_check</span>
-                                Review &amp; Verify
-                            </a>
-                        </div>
-                    </div>
-                </article>
+                <!-- Live feed container -->
+                <div id="dashboardFeedContainer">
+                    <p style="color:var(--text-muted); padding: 1rem 0;">Loading fresh items...</p>
+                </div>
 
                 <!-- Projects table -->
                 <div>
@@ -325,81 +257,9 @@
                                     <th scope="col" aria-label="Action"></th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="dashboardProjectsContainer">
                                 <tr>
-                                    <td>
-                                        <div class="sp-proj-cell">
-                                            <div class="sp-proj-emoji" aria-hidden="true">💧</div>
-                                            <div>
-                                                <p class="sp-proj-name">Water Pipeline — Ward 4</p>
-                                                <p class="sp-proj-id">PRJ-2024-1089</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td style="font-size:.875rem;color:#475569;font-weight:600">Sharma Constructions</td>
-                                    <td style="font-size:.875rem;font-weight:700;color:#0f172a">₹3,50,000</td>
-                                    <td>
-                                        <div class="sp-prog-cell">
-                                            <div class="sp-prog-bar"><div class="sp-prog-fill" style="width:72%"></div></div>
-                                            <span class="sp-prog-pct">72%</span>
-                                        </div>
-                                    </td>
-                                    <td><span class="sp-status-tag in-progress">In Progress</span></td>
-                                    <td>
-                                        <button class="sp-table-action" onclick="window.location.href='contractor-verification.html'" aria-label="View project details">
-                                            <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="sp-proj-cell">
-                                            <div class="sp-proj-emoji" aria-hidden="true">🛤️</div>
-                                            <div>
-                                                <p class="sp-proj-name">School Road Repair</p>
-                                                <p class="sp-proj-id">PRJ-2024-0956</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td style="font-size:.875rem;color:#475569;font-weight:600">Gupta Contractors</td>
-                                    <td style="font-size:.875rem;font-weight:700;color:#0f172a">₹2,25,000</td>
-                                    <td>
-                                        <div class="sp-prog-cell">
-                                            <div class="sp-prog-bar"><div class="sp-prog-fill" style="width:45%"></div></div>
-                                            <span class="sp-prog-pct">45%</span>
-                                        </div>
-                                    </td>
-                                    <td><span class="sp-status-tag in-progress">In Progress</span></td>
-                                    <td>
-                                        <button class="sp-table-action" onclick="window.location.href='active-projects.html'" aria-label="View project details">
-                                            <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="sp-proj-cell">
-                                            <div class="sp-proj-emoji" aria-hidden="true">🏫</div>
-                                            <div>
-                                                <p class="sp-proj-name">School Boundary Wall</p>
-                                                <p class="sp-proj-id">PRJ-2024-0892</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td style="font-size:.875rem;color:#475569;font-weight:600">Devi Construction</td>
-                                    <td style="font-size:.875rem;font-weight:700;color:#0f172a">₹1,85,000</td>
-                                    <td>
-                                        <div class="sp-prog-cell">
-                                            <div class="sp-prog-bar"><div class="sp-prog-fill" style="width:100%;background:linear-gradient(90deg,#22c55e,#16a34a)"></div></div>
-                                            <span class="sp-prog-pct">100%</span>
-                                        </div>
-                                    </td>
-                                    <td><span class="sp-status-tag verification">Awaiting Verification</span></td>
-                                    <td>
-                                        <button class="sp-table-action" onclick="window.location.href='contractor-verification.html'" aria-label="Verify completed work">
-                                            <span class="material-symbols-outlined" aria-hidden="true">verified</span>
-                                        </button>
-                                    </td>
+                                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading active projects...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -455,53 +315,8 @@
 
                     <div class="sp-breakdown">
                         <h4>Spending by Category</h4>
-                        <div class="sp-breakdown-item">
-                            <div class="sp-breakdown-dot" style="background:#0ea5e9" aria-hidden="true"></div>
-                            <div class="sp-breakdown-meta">
-                                <div class="sp-breakdown-labels">
-                                    <span class="sp-breakdown-name">Water Supply</span>
-                                    <span class="sp-breakdown-val">₹12,50,000</span>
-                                </div>
-                                <div class="sp-breakdown-bar" style="background:#e0f2fe">
-                                    <div style="width:41%;height:100%;border-radius:999px;background:#0ea5e9"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="sp-breakdown-item">
-                            <div class="sp-breakdown-dot" style="background:#f59e0b" aria-hidden="true"></div>
-                            <div class="sp-breakdown-meta">
-                                <div class="sp-breakdown-labels">
-                                    <span class="sp-breakdown-name">Roads &amp; Paths</span>
-                                    <span class="sp-breakdown-val">₹8,75,000</span>
-                                </div>
-                                <div class="sp-breakdown-bar" style="background:#fef3c7">
-                                    <div style="width:29%;height:100%;border-radius:999px;background:#f59e0b"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="sp-breakdown-item">
-                            <div class="sp-breakdown-dot" style="background:#8b5cf6" aria-hidden="true"></div>
-                            <div class="sp-breakdown-meta">
-                                <div class="sp-breakdown-labels">
-                                    <span class="sp-breakdown-name">Education</span>
-                                    <span class="sp-breakdown-val">₹5,25,000</span>
-                                </div>
-                                <div class="sp-breakdown-bar" style="background:#ede9fe">
-                                    <div style="width:17%;height:100%;border-radius:999px;background:#8b5cf6"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="sp-breakdown-item">
-                            <div class="sp-breakdown-dot" style="background:#22c55e" aria-hidden="true"></div>
-                            <div class="sp-breakdown-meta">
-                                <div class="sp-breakdown-labels">
-                                    <span class="sp-breakdown-name">Sanitation</span>
-                                    <span class="sp-breakdown-val">₹3,50,000</span>
-                                </div>
-                                <div class="sp-breakdown-bar" style="background:#dcfce7">
-                                    <div style="width:12%;height:100%;border-radius:999px;background:#22c55e"></div>
-                                </div>
-                            </div>
+                        <div id="spCategoryBreakdown">
+                            <p style="color:var(--text-muted);font-size:.8125rem">Loading...</p>
                         </div>
                     </div>
                 </div>
@@ -579,7 +394,7 @@
                 if (budget) {
                     var total = budget.totalReceived || 0;
                     var spent = budget.totalSpent    || 0;
-                    var committed = budget.pendingApproval || 0;
+                    var committed = budget.sanctionedFunds !== undefined ? budget.sanctionedFunds : (budget.pendingApproval || 0);
                     var avail = budget.available     || 0;
                     
                     document.getElementById('budgetValue').textContent = GramSabha.formatCurrency(total);
@@ -601,6 +416,200 @@
                         var offset = dasharray - (dasharray * pct / 100);
                         ringFg.style.strokeDasharray = dasharray;
                         ringFg.style.strokeDashoffset = offset;
+                    }
+
+                    // Update budget trend badge
+                    var trendEl = document.getElementById('budgetTrend');
+                    if (trendEl) {
+                        trendEl.innerHTML = '<span class="material-symbols-outlined">trending_up</span> ' + pct + '% Used';
+                    }
+
+                    // Build spending-by-category from projects
+                    var categoryColors = {
+                        'water': { dot: '#0ea5e9', bg: '#e0f2fe', label: 'Water Supply' },
+                        'roads': { dot: '#f59e0b', bg: '#fef3c7', label: 'Roads & Paths' },
+                        'education': { dot: '#8b5cf6', bg: '#ede9fe', label: 'Education' },
+                        'sanitation': { dot: '#22c55e', bg: '#dcfce7', label: 'Sanitation' },
+                        'electricity': { dot: '#ef4444', bg: '#fee2e2', label: 'Electricity' },
+                        'other': { dot: '#64748b', bg: '#f1f5f9', label: 'Other' }
+                    };
+
+                    var catTotals = {};
+                    (budget.projects || []).forEach(function(p) {
+                        var catKey = (p.category || 'other').toLowerCase();
+                        if (!catTotals[catKey]) catTotals[catKey] = 0;
+                        catTotals[catKey] += (p.sanctioned || 0);
+                    });
+
+                    var grandTotal = Object.values(catTotals).reduce(function(a, b) { return a + b; }, 0) || 1;
+                    var bdEl = document.getElementById('spCategoryBreakdown');
+                    if (bdEl) {
+                        var catKeys = Object.keys(catTotals);
+                        if (catKeys.length === 0) {
+                            bdEl.innerHTML = '<p style="color:var(--text-muted);font-size:.8125rem">No project data yet</p>';
+                        } else {
+                            bdEl.innerHTML = catKeys.map(function(key) {
+                                var conf = categoryColors[key] || categoryColors['other'];
+                                var val = catTotals[key];
+                                var pctCat = Math.round((val / grandTotal) * 100);
+                                return '<div class="sp-breakdown-item">' +
+                                    '<div class="sp-breakdown-dot" style="background:' + conf.dot + '" aria-hidden="true"></div>' +
+                                    '<div class="sp-breakdown-meta">' +
+                                        '<div class="sp-breakdown-labels">' +
+                                            '<span class="sp-breakdown-name">' + conf.label + '</span>' +
+                                            '<span class="sp-breakdown-val">' + GramSabha.formatCurrency(val) + '</span>' +
+                                        '</div>' +
+                                        '<div class="sp-breakdown-bar" style="background:' + conf.bg + '">' +
+                                            '<div style="width:' + pctCat + '%;height:100%;border-radius:999px;background:' + conf.dot + '"></div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>';
+                            }).join('');
+                        }
+                    }
+
+                    // Active Projects Table
+                    if (budget.projects) {
+                        var activeProjects = budget.projects.filter(function(p) {
+                            return (p.status || '').toLowerCase() !== 'completed';
+                        });
+                        
+                        var projCountEl = document.getElementById('spActiveProjCount');
+                        if (projCountEl) projCountEl.textContent = activeProjects.length;
+                        
+                        var projContainer = document.getElementById('dashboardProjectsContainer');
+                        if (projContainer) {
+                            if (activeProjects.length === 0) {
+                                projContainer.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No active projects at this time.</td></tr>';
+                            } else {
+                                projContainer.innerHTML = activeProjects.map(function(p) {
+                                    var title = escapeHtml(p.name || p.title || 'Untitled Project');
+                                    var cName = escapeHtml(p.contractor || p.contractorName || 'Unassigned Contractor');
+                                    var amt = GramSabha.formatCurrency(p.sanctioned || p.amount || 0);
+                                    var prog = Math.round(p.progress || 0);
+                                    
+                                    var statusLabel = 'In Progress';
+                                    var statusClass = 'in-progress';
+                                    
+                                    if ((p.status || '').toLowerCase() === 'pending_approval') {
+                                        statusLabel = 'Awaiting Verification';
+                                        statusClass = 'verification';
+                                    } else if ((p.status || '').toLowerCase() === 'completed') {
+                                        statusLabel = 'Completed';
+                                        statusClass = 'completed';
+                                    }
+                                    
+                                    return '<tr>' +
+                                        '<td>' +
+                                            '<div class="sp-proj-cell">' +
+                                                '<div class="sp-proj-emoji" aria-hidden="true">🏗️</div>' +
+                                                '<div>' +
+                                                    '<p class="sp-proj-name">' + title + '</p>' +
+                                                    '<p class="sp-proj-id">PRJ-' + p.id + '</p>' +
+                                                '</div>' +
+                                            '</div>' +
+                                        '</td>' +
+                                        '<td style="font-size:.875rem;color:#475569;font-weight:600">' + cName + '</td>' +
+                                        '<td style="font-size:.875rem;font-weight:700;color:#0f172a">' + amt + '</td>' +
+                                        '<td>' +
+                                            '<div class="sp-prog-cell">' +
+                                                '<div class="sp-prog-bar"><div class="sp-prog-fill" style="width:' + prog + '%"></div></div>' +
+                                                '<span class="sp-prog-pct">' + prog + '%</span>' +
+                                            '</div>' +
+                                        '</td>' +
+                                        '<td><span class="sp-status-tag ' + statusClass + '">' + statusLabel + '</span></td>' +
+                                        '<td>' +
+                                            '<button class="sp-table-action" onclick="window.location.href=\'active-projects.html\'" aria-label="View project details">' +
+                                                '<span class="material-symbols-outlined" aria-hidden="true">visibility</span>' +
+                                            '</button>' +
+                                        '</td>' +
+                                    '</tr>';
+                                }).join('');
+                            }
+                        }
+                    }
+                }
+            } catch(e) {}
+            
+            // Live Issues Feed
+            try {
+                var issues = await GramSabha.getIssues(villageId);
+                if (issues) {
+                    var openIssues = issues.filter(function(i) {
+                        var s = (i.status || '').toLowerCase();
+                        return s !== 'resolved' && s !== 'closed' && s !== 'in_progress' && !i.contractor;
+                    });
+                    
+                    var countEl = document.getElementById('dashboardOpenIssuesCount');
+                    if (countEl) countEl.textContent = openIssues.length;
+                    
+                    var trendEl = document.getElementById('dashboardOpenIssuesTrend');
+                    if (trendEl && openIssues.length === 0) {
+                        trendEl.className = 'sp-stat-trend up';
+                        trendEl.innerHTML = '<span class="material-symbols-outlined">check_circle</span> All Clear';
+                    } else if (trendEl) {
+                        trendEl.innerHTML = '<span class="material-symbols-outlined">priority_high</span> ' + openIssues.length + ' Open';
+                    }
+                    
+                    var feedEl = document.getElementById('dashboardFeedContainer');
+                    if (feedEl) {
+                        if (openIssues.length === 0) {
+                            feedEl.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-muted); background: white; border-radius: 12px; border: 1px dashed var(--border-color); margin-bottom: 2rem;">' +
+                                '<span class="material-symbols-outlined" style="font-size: 3rem; margin-bottom: 0.5rem; opacity: 0.5;">celebration</span><br>No pending issues requiring your attention.</div>';
+                        } else {
+                            var topIssues = openIssues.slice(0, 3);
+                            var icons = { 'water': 'water_drop', 'roads': 'edit_road', 'electricity': 'bolt', 'sanitation': 'delete', 'education': 'school' };
+                            
+                            feedEl.innerHTML = topIssues.map(function(i) {
+                                var cat = (i.category || '').toLowerCase();
+                                var catName = escapeHtml(i.categoryName || i.category || 'Other');
+                                var title = escapeHtml(i.title || 'Untitled Issue');
+                                var desc = escapeHtml(i.description || '');
+                                var icon = icons[cat] || 'campaign';
+                                var dateStr = GramSabha.formatDate(i.reportedDate || i.createdAt);
+                                var votes = i.votes || 0;
+                                var location = escapeHtml(i.location || '—');
+                                var reporter = escapeHtml(i.reportedByName || 'Villager');
+
+                                // Attachments
+                                var apiBase = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
+                                var atts = i.attachments || [];
+                                var attHtml = atts.length > 0
+                                    ? '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0">' +
+                                        atts.map(function(url) {
+                                            var isVideo = /\.(mp4|webm|mov)$/i.test(url);
+                                            if (isVideo) return '<div style="width:50px;height:50px;border-radius:.4rem;background:#f1f5f9;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="window.open(\'' + apiBase + url + '\',\'_blank\')"><span class="material-symbols-outlined" style="font-size:1.25rem;color:#64748b">videocam</span></div>';
+                                            return '<img src="' + apiBase + url + '" style="width:50px;height:50px;object-fit:cover;border-radius:.4rem;cursor:pointer;border:1px solid #e2e8f0" onclick="window.open(\'' + apiBase + url + '\',\'_blank\')" alt="attachment">';
+                                        }).join('') + '</div>'
+                                    : '';
+                                
+                                return '<article class="sp-approval-card high" aria-label="Issue: ' + title + '">' +
+                                    '<div class="sp-approval-top">' +
+                                        '<span class="sp-approval-type">' + catName + '</span>' +
+                                        '<span class="sp-approval-priority ' + (i.priority === 'urgent' ? 'urgent' : 'high') + '">' +
+                                            '<span class="material-symbols-outlined" aria-hidden="true">warning</span>' +
+                                            (i.priority === 'urgent' ? 'Urgent' : 'High') +
+                                        '</span>' +
+                                    '</div>' +
+                                    '<div class="sp-approval-body">' +
+                                        '<h3 class="sp-approval-title">' + title + '</h3>' +
+                                        (desc ? '<p style="font-size:.8125rem;color:#475569;margin:.25rem 0 .375rem">' + desc + '</p>' : '') +
+                                        attHtml +
+                                        '<p class="sp-approval-sub"><span class="material-symbols-outlined" style="font-size:.875rem;vertical-align:middle">person</span> ' + reporter + ' · ' + votes + ' votes · ' + dateStr + '</p>' +
+                                        '<div class="sp-approval-actions">' +
+                                            '<a href="contractors.html?issue=' + i.id + '" class="sp-btn assign" aria-label="Assign to contractor">' +
+                                                '<span class="material-symbols-outlined" aria-hidden="true">assignment_ind</span>' +
+                                                'Assign to Dept.' +
+                                            '</a>' +
+                                            '<a href="community-issues.html?id=' + i.id + '" class="sp-btn review" aria-label="Review issue details">' +
+                                                '<span class="material-symbols-outlined" aria-hidden="true">visibility</span>' +
+                                                'View Details' +
+                                            '</a>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</article>';
+                            }).join('');
+                        }
                     }
                 }
             } catch(e) {}

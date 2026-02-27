@@ -113,6 +113,39 @@ async function voteIssue(issueId, userId) {
     return r;
 }
 
+async function createProject(projectData) {
+    const r = await apiPost('/api/projects', projectData);
+    return r;
+}
+
+async function assignProject(projectId, contractorName) {
+    const r = await apiPost('/api/projects/' + encodeURIComponent(projectId) + '/assign', { contractor_name: contractorName });
+    return r;
+}
+
+async function verifyProjectStep(projectId, step, photoUrl) {
+    const payload = { step: step };
+    if (photoUrl) payload.photo_url = photoUrl;
+    const r = await apiPost('/api/projects/' + encodeURIComponent(projectId) + '/verify_step', payload);
+    return r;
+}
+
+// ---------- Admin API helpers ----------
+async function getAdminStats() {
+    const r = await apiGet('/api/admin/stats');
+    return r.data || { activeVillages: 0, registeredUsers: 0, issuesResolved: 0, totalFundsTracked: 0 };
+}
+
+async function getAdminUsers() {
+    const r = await apiGet('/api/admin/users');
+    return r.data || [];
+}
+
+async function getAdminAlerts() {
+    const r = await apiGet('/api/admin/alerts');
+    return r.data || [];
+}
+
 // Role detection for login page (optional: call API to show role before submit)
 async function checkMobileRole(mobile) {
     if (!mobile || mobile.length < 10) return null;
@@ -254,6 +287,7 @@ function getGreeting() {
 // Export for use in other pages
 window.GramSabha = {
     API_BASE,
+    apiBase: API_BASE,   // alias so GramSabha.apiBase works everywhere
     apiGet,
     apiPost,
     getVillage,
@@ -261,6 +295,9 @@ window.GramSabha = {
     getBudget,
     getActivities,
     voteIssue,
+    createProject,
+    assignProject,
+    verifyProjectStep,
     checkMobileRole,
     saveSession,
     getSession,

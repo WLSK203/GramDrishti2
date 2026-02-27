@@ -564,79 +564,8 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td>
-                                    <div class="user-cell">
-                                        <div class="user-avatar-table" style="background: linear-gradient(135deg, #16a34a 0%, #059669 100%);">RK</div>
-                                        <div class="user-details">
-                                            <h4>Ramesh Kumar</h4>
-                                            <p>ramesh.kumar@panchayat.gov.in</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td><span class="role-badge sarpanch">Sarpanch</span></td>
-                                <td>Rampur</td>
-                                <td>
-                                    <div class="status-cell">
-                                        <div class="status-dot active"></div>
-                                        <span>Active</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <button class="action-btn-table">
-                                        <span class="material-symbols-outlined">more_vert</span>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div class="user-cell">
-                                        <div class="user-avatar-table" style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);">AK</div>
-                                        <div class="user-details">
-                                            <h4>Arun Kumar</h4>
-                                            <p>arun.csc@digiseva.gov.in</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td><span class="role-badge operator">CSC Operator</span></td>
-                                <td>Rampur</td>
-                                <td>
-                                    <div class="status-cell">
-                                        <div class="status-dot active"></div>
-                                        <span>Active</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <button class="action-btn-table">
-                                        <span class="material-symbols-outlined">more_vert</span>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div class="user-cell">
-                                        <div class="user-avatar-table" style="background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);">PS</div>
-                                        <div class="user-details">
-                                            <h4>Priya Sharma</h4>
-                                            <p>priya.admin@gramsabha.gov.in</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td><span class="role-badge admin">System Admin</span></td>
-                                <td>District HQ</td>
-                                <td>
-                                    <div class="status-cell">
-                                        <div class="status-dot active"></div>
-                                        <span>Active</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <button class="action-btn-table">
-                                        <span class="material-symbols-outlined">more_vert</span>
-                                    </button>
-                                </td>
-                            </tr>
+                        <tbody id="directoryTableBody">
+                            <tr><td colspan="5" style="text-align:center; padding: 2rem;">Loading directory...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -644,60 +573,112 @@
                 <!-- Security Panel -->
                 <div class="security-panel">
                     <div class="security-header">
-                        <h3>Security Alerts</h3>
+                        <h3>System Activities (Alerts)</h3>
                         <button class="view-all">View All Logs</button>
                     </div>
-
-                    <div class="security-alert warning">
-                        <div class="alert-icon">
-                            <span class="material-symbols-outlined">warning</span>
-                        </div>
-                        <div class="alert-content">
-                            <h4>Unusual Login Pattern Detected</h4>
-                            <p>Multiple failed login attempts from IP 192.168.1.xxx for user ID: SAR-0892</p>
-                        </div>
-                        <span class="alert-time">2 min ago</span>
-                    </div>
-
-                    <div class="security-alert info">
-                        <div class="alert-icon">
-                            <span class="material-symbols-outlined">info</span>
-                        </div>
-                        <div class="alert-content">
-                            <h4>System Maintenance Scheduled</h4>
-                            <p>Planned downtime on Sunday 03:00 AM - 05:00 AM for database optimization</p>
-                        </div>
-                        <span class="alert-time">1 hour ago</span>
-                    </div>
-
-                    <div class="security-alert success">
-                        <div class="alert-icon">
-                            <span class="material-symbols-outlined">check_circle</span>
-                        </div>
-                        <div class="alert-content">
-                            <h4>Backup Completed Successfully</h4>
-                            <p>Daily automated backup of all village records completed without errors</p>
-                        </div>
-                        <span class="alert-time">3 hours ago</span>
+                    <div id="alertsContainer">
+                        <div style="text-align:center; padding: 2rem;">Loading alerts...</div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <script src="js/auth.js"></script>
+    <script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
     <script src="js/app.js"></script>
-<script src="js/mobile.js"></script>
+    <script src="js/mobile.js"></script>
     <script>
         // Check authentication
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             const user = GramSabha.requireAuth(['admin']);
             if (!user) return;
             
             // Update user info in sidebar
-            document.querySelector('.sidebar-user-name').textContent = user.name;
-            document.querySelector('.sidebar-avatar').textContent = user.avatar;
+            document.querySelector('.sidebar-user-name').textContent = user.name || 'Admin';
+            document.querySelector('.sidebar-avatar').textContent = (user.name || 'A').substring(0,2).toUpperCase();
+            
+            await initAdminDashboard();
         });
+
+        async function initAdminDashboard() {
+            try {
+                // 1. Fetch & Render Stats
+                const stats = await getAdminStats();
+                document.querySelectorAll('.stat-value')[0].textContent = stats.activeVillages || 0;
+                document.querySelectorAll('.stat-value')[1].textContent = stats.registeredUsers || 0;
+                document.querySelectorAll('.stat-value')[2].textContent = stats.issuesResolved || 0;
+                const funds = stats.totalFundsTracked || 0;
+                document.querySelectorAll('.stat-value')[3].textContent = '₹' + (funds >= 10000000 ? (funds/10000000).toFixed(2) + ' Cr' : funds >= 100000 ? (funds/100000).toFixed(2) + ' L' : funds.toLocaleString());
+
+                // 2. Fetch & Render Users
+                const users = await getAdminUsers();
+                const tbody = document.getElementById('directoryTableBody');
+                if (!users || users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No users found.</td></tr>';
+                } else {
+                    tbody.innerHTML = users.map(u => {
+                        const roleClass = u.role === 'sarpanch' ? 'sarpanch' : u.role === 'admin' ? 'admin' : 'operator';
+                        const roleName = u.role === 'sarpanch' ? 'Sarpanch' : u.role === 'admin' ? 'System Admin' : 'Villager';
+                        const initials = (u.name || 'U').substring(0,2).toUpperCase();
+                        let bg = '#16a34a'; // default green
+                        if(u.role === 'admin') bg = '#7c3aed';
+                        if(u.role === 'villager' || !u.role) bg = '#2563eb';
+
+                        return `
+                        <tr>
+                            <td>
+                                <div class="user-cell">
+                                    <div class="user-avatar-table" style="background: ${bg};">${initials}</div>
+                                    <div class="user-details">
+                                        <h4>${u.name}</h4>
+                                        <p>${u.mobile || u.externalId}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="role-badge ${roleClass}">${roleName}</span></td>
+                            <td>${u.villageName || 'Unassigned'}</td>
+                            <td>
+                                <div class="status-cell">
+                                    <div class="status-dot active"></div>
+                                    <span>Active</span>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="action-btn-table"><span class="material-symbols-outlined">more_vert</span></button>
+                            </td>
+                        </tr>`;
+                    }).join('');
+                }
+
+                // 3. Fetch & Render Alerts (Activities)
+                const alerts = await getAdminAlerts();
+                const alertsContainer = document.getElementById('alertsContainer');
+                if (!alerts || alerts.length === 0) {
+                    alertsContainer.innerHTML = '<div style="text-align:center; opacity:.5;">No recent system activity.</div>';
+                } else {
+                    alertsContainer.innerHTML = alerts.map(a => {
+                        const isWarning = a.type === 'issue_reported';
+                        const alertClass = isWarning ? 'warning' : 'info';
+                        const icon = a.icon || 'info';
+                        // Simple 0 min ago format placeholder
+                        const timeStr = new Date(a.createdAt).toLocaleDateString();
+                        
+                        return `
+                        <div class="security-alert ${alertClass}">
+                            <div class="alert-icon"><span class="material-symbols-outlined">${icon}</span></div>
+                            <div class="alert-content">
+                                <h4>${a.title}</h4>
+                                <p>${a.description}</p>
+                            </div>
+                            <span class="alert-time" style="white-space:nowrap">${timeStr}</span>
+                        </div>`;
+                    }).join('');
+                }
+
+            } catch (error) {
+                console.error("Dashboard init error:", error);
+            }
+        }
     </script>
     <style>
         /* Add logout button to sidebar */

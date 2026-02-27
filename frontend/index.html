@@ -122,24 +122,24 @@
                 <h2 class="section-title" data-i18n="services.title">Our Services / हमारी सेवाएं</h2>
                 <div class="services-grid">
                     <div class="service-card">
-                        <span class="material-symbols-outlined service-icon">description</span>
-                        <h4 data-i18n="services.certificates">Certificates</h4>
-                        <p data-i18n="services.certificatesDesc">Apply for Birth, Death, and Income papers.</p>
+                        <span class="material-symbols-outlined service-icon">campaign</span>
+                        <h4 data-i18n="services.complaints">Issue Reporting</h4>
+                        <p data-i18n="services.complaintsDesc">Report village issues and track resolutions in real-time.</p>
                     </div>
                     <div class="service-card">
-                        <span class="material-symbols-outlined service-icon">payments</span>
-                        <h4 data-i18n="services.benefits">Direct Benefits</h4>
-                        <p data-i18n="services.benefitsDesc">Check PM-Kisan and subsidy statuses.</p>
+                        <span class="material-symbols-outlined service-icon">account_balance_wallet</span>
+                        <h4 data-i18n="services.budget">Budget Transparency</h4>
+                        <p data-i18n="services.budgetDesc">Track every rupee of village funds with full public ledger.</p>
                     </div>
                     <div class="service-card">
-                        <span class="material-symbols-outlined service-icon">school</span>
-                        <h4 data-i18n="services.education">Education</h4>
-                        <p data-i18n="services.educationDesc">School information and student training.</p>
+                        <span class="material-symbols-outlined service-icon">verified</span>
+                        <h4 data-i18n="services.verification">Work Verification</h4>
+                        <p data-i18n="services.verificationDesc">GPS, photos & community verification for all projects.</p>
                     </div>
                     <div class="service-card">
-                        <span class="material-symbols-outlined service-icon">health_and_safety</span>
-                        <h4 data-i18n="services.health">Health</h4>
-                        <p data-i18n="services.healthDesc">Nearest health center and vaccine info.</p>
+                        <span class="material-symbols-outlined service-icon">how_to_vote</span>
+                        <h4 data-i18n="services.voting">Community Voting</h4>
+                        <p data-i18n="services.votingDesc">Vote on issues to prioritize what matters most.</p>
                     </div>
                 </div>
             </div>
@@ -155,48 +155,31 @@
                     </div>
                     <div class="fund-total">
                         <p data-i18n="fund.verified">Total Verified Funds</p>
-                        <span class="fund-amount">₹ 4.28 Crore</span>
+                        <span class="fund-amount" id="homeFundTotal">—</span>
                     </div>
                 </div>
 
                 <div class="fund-grid">
-                    <div class="fund-progress-section">
-                        <div class="progress-item">
-                            <div class="progress-header">
-                                <span data-i18n="fund.road">Road Construction</span>
-                                <span class="progress-percent">85%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 85%"></div>
-                            </div>
-                        </div>
-                        <div class="progress-item">
-                            <div class="progress-header">
-                                <span data-i18n="fund.water">Clean Water</span>
-                                <span class="progress-percent">100%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 100%"></div>
-                            </div>
-                        </div>
+                    <div class="fund-progress-section" id="homeFundBars">
+                        <p style="color:#94a3b8;font-size:.875rem">Loading fund data...</p>
                     </div>
 
                     <div class="recent-wins">
-                        <h3 data-i18n="fund.recentWins">Recent Village Wins</h3>
+                        <h3 data-i18n="fund.recentWins">Fund Summary</h3>
                         <div class="win-item">
                             <div class="win-image" style="background: linear-gradient(135deg, #16a34a 0%, #059669 100%);"></div>
                             <div class="win-content">
-                                <h4>New Village Road</h4>
-                                <p>Connecting 3 hamlets to the main highway.</p>
-                                <span class="win-status">Completed</span>
+                                <h4>Spent</h4>
+                                <p id="homeFundSpent">—</p>
+                                <span class="win-status" id="homeFundSpentPct">—</span>
                             </div>
                         </div>
                         <div class="win-item">
                             <div class="win-image" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);"></div>
                             <div class="win-content">
-                                <h4>Solar Power Pumps</h4>
-                                <p>24 community pumps installed.</p>
-                                <span class="win-status">Completed</span>
+                                <h4>Available</h4>
+                                <p id="homeFundAvailable">—</p>
+                                <span class="win-status" id="homeFundAvailPct">—</span>
                             </div>
                         </div>
                     </div>
@@ -271,7 +254,7 @@
 <script src="js/mobile.js"></script>
     <script>
         // Check login status and update UI
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             const user = GramSabha.getCurrentUser();
             const userMenu = document.getElementById('userMenu');
             const loginBtn = document.getElementById('loginBtn');
@@ -315,6 +298,50 @@
                 loginBtn.style.display = 'none';
                 dashboardLink.href = user.redirectUrl;
                 if (fundSection) fundSection.style.display = 'block';
+
+                // Dynamically load fund data
+                try {
+                    var villageId = user.villageId || user.village_id || 1;
+                    var fmt = function(n) { return '₹' + (n || 0).toLocaleString('en-IN'); };
+                    var budgetRes = await fetch('http://127.0.0.1:5000/api/budget?village_id=' + villageId).then(function(r) { return r.json(); });
+                    var bud = budgetRes && budgetRes.success && budgetRes.data ? budgetRes.data : {};
+                    var total = bud.totalReceived || 0;
+                    var spent = bud.totalSpent || 0;
+                    var avail = bud.available || 0;
+                    document.getElementById('homeFundTotal').textContent = fmt(total);
+                    document.getElementById('homeFundSpent').textContent = fmt(spent);
+                    document.getElementById('homeFundAvailable').textContent = fmt(avail);
+                    var spentPct = total > 0 ? Math.round(spent / total * 100) : 0;
+                    var availPct = total > 0 ? (100 - spentPct) : 0;
+                    document.getElementById('homeFundSpentPct').textContent = spentPct + '% utilised';
+                    document.getElementById('homeFundAvailPct').textContent = availPct + '% remaining';
+
+                    // Build category progress bars from projects
+                    var cats = {};
+                    (bud.projects || []).forEach(function(p) {
+                        var c = p.category || 'other';
+                        if (!cats[c]) cats[c] = { sanctioned: 0, spent: 0 };
+                        cats[c].sanctioned += (p.sanctioned || 0);
+                        cats[c].spent += (p.spent || 0);
+                    });
+                    var catNames = { water: 'Water Supply', roads: 'Roads & Paths', electricity: 'Electricity', sanitation: 'Sanitation', education: 'Education', other: 'Other' };
+                    var barsHtml = Object.keys(cats).map(function(k) {
+                        var s = cats[k].sanctioned || 1;
+                        var pct = Math.round(cats[k].spent / s * 100);
+                        return '<div class="progress-item">' +
+                            '<div class="progress-header">' +
+                                '<span>' + (catNames[k] || k) + '</span>' +
+                                '<span class="progress-percent">' + pct + '%</span>' +
+                            '</div>' +
+                            '<div class="progress-bar">' +
+                                '<div class="progress-fill" style="width:' + pct + '%"></div>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
+                    document.getElementById('homeFundBars').innerHTML = barsHtml || '<p style="color:#94a3b8;font-size:.875rem">No project data yet</p>';
+                } catch(e) {
+                    console.error('Fund section error', e);
+                }
             } else {
                 // User is not logged in
                 userMenu.style.display = 'none';

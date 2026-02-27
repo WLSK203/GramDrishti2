@@ -11,7 +11,7 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
 CORS(app, origins=CORS_ORIGINS, supports_credentials=True)
 
-UPLOAD_FOLDER = "uploads"
+UPLOAD_FOLDER = "Uploaded data"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @app.route("/api/upload", methods=["POST"])
 def upload_file():
@@ -19,18 +19,53 @@ def upload_file():
         return jsonify({"success": False, "message": "No file found"}), 400
 
     file = request.files["file"]
+    project_id = request.form.get("project_id")
 
     if file.filename == "":
         return jsonify({"success": False, "message": "Empty filename"}), 400
 
-    save_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    if not project_id:
+        save_dir = UPLOAD_FOLDER
+        url_prefix = "/api/uploads/"
+    else:
+        try:
+            project_id = int(project_id)
+            project = run_query_one("SELECT name FROM projects WHERE id = %s", (project_id,))
+            if not project:
+                return jsonify({"success": False, "message": "Project not found"}), 404
+                
+            import re
+            safe_name = re.sub(r'[^A-Za-z0-9]', '_', project["name"])
+            folder_name = f"Project_{project_id}_{safe_name}"
+            save_dir = os.path.join(UPLOAD_FOLDER, folder_name)
+            os.makedirs(save_dir, exist_ok=True)
+            url_prefix = f"/api/uploads/{folder_name}/"
+        except Exception as e:
+            return jsonify({"success": False, "message": str(e)}), 500
+
+    import uuid
+    ext = os.path.splitext(file.filename)[1]
+    unique_name = uuid.uuid4().hex[:12] + ext
+    save_path = os.path.join(save_dir, unique_name)
     file.save(save_path)
 
+    # Return a URL-friendly path
+    file_url = url_prefix + unique_name
     return jsonify({
         "success": True,
         "message": "File uploaded successfully",
-        "path": save_path
+        "path": file_url,
+        "filename": file.filename
     })
+
+
+@app.route("/api/uploads/<path:filename>")
+def serve_upload(filename):
+    """Serve uploaded files."""
+    from flask import send_from_directory
+    return send_from_directory(os.path.abspath(UPLOAD_FOLDER), filename)
+
+
 def to_camel(d):
     """Convert dict keys from snake_case to camelCase for frontend. Leaves keys without underscore unchanged (e.g. redirectUrl)."""
     if d is None:
@@ -193,10 +228,12 @@ def list_issues():
                 rows = run_query(
                     """
                     SELECT i.id, i.external_id, i.title, i.title_hindi, i.description, i.category, i.category_name,
-                           i.status, i.status_name, i.priority, i.department, i.reported_by_name, i.reported_date,
-                           i.votes, i.location, i.progress, i.contractor, i.estimated_cost, i.created_at,
+                           i.status, i.status_name, i.priority, i.department, i.reported_by_id, i.reported_by_name, i.reported_date,
+                           i.votes, i.location, COALESCE(p.progress, i.progress) as progress, i.contractor, i.estimated_cost, i.attachments, i.created_at,
+                           p.verification_images,
                            EXISTS (SELECT 1 FROM issue_votes v WHERE v.issue_id = i.id AND v.user_id = %s) AS user_voted
                     FROM issues i
+                    LEFT JOIN projects p ON p.id = i.project_id
                     WHERE i.village_id = %s
                     ORDER BY i.created_at DESC
                     LIMIT 50
@@ -206,13 +243,15 @@ def list_issues():
             else:
                 rows = run_query(
                     """
-                    SELECT id, external_id, title, title_hindi, description, category, category_name,
-                           status, status_name, priority, department, reported_by_name, reported_date,
-                           votes, location, progress, contractor, estimated_cost, created_at,
+                    SELECT i.id, i.external_id, i.title, i.title_hindi, i.description, i.category, i.category_name,
+                           i.status, i.status_name, i.priority, i.department, i.reported_by_id, i.reported_by_name, i.reported_date,
+                           i.votes, i.location, COALESCE(p.progress, i.progress) as progress, i.contractor, i.estimated_cost, i.attachments, i.created_at,
+                           p.verification_images,
                            false AS user_voted
-                    FROM issues
-                    WHERE village_id = %s
-                    ORDER BY created_at DESC
+                    FROM issues i
+                    LEFT JOIN projects p ON p.id = i.project_id
+                    WHERE i.village_id = %s
+                    ORDER BY i.created_at DESC
                     LIMIT 50
                     """,
                     (village_id,),
@@ -220,11 +259,13 @@ def list_issues():
         else:
             rows = run_query(
                 """
-                SELECT id, external_id, title, title_hindi, description, category, category_name,
-                       status, status_name, priority, department, reported_by_name, reported_date,
-                       votes, location, progress, contractor, estimated_cost, created_at
-                FROM issues
-                ORDER BY created_at DESC
+                SELECT i.id, i.external_id, i.title, i.title_hindi, i.description, i.category, i.category_name,
+                       i.status, i.status_name, i.priority, i.department, i.reported_by_id, i.reported_by_name, i.reported_date,
+                       i.votes, i.location, COALESCE(p.progress, i.progress) as progress, i.contractor, i.estimated_cost, i.attachments, i.created_at,
+                       p.verification_images
+                FROM issues i
+                LEFT JOIN projects p ON p.id = i.project_id
+                ORDER BY i.created_at DESC
                 LIMIT 50
                 """
             )
@@ -236,9 +277,27 @@ def list_issues():
             else:
                 for r in rows:
                     r["user_voted"] = False
-        # Normalize for frontend (external_id as id if frontend expects string id)
+        # Normalize for frontend — keep numeric id as numericId for delete operations
+        import json as _json
         for r in rows:
+            r["numeric_id"] = r["id"]
             r["id"] = r.get("external_id") or str(r["id"])
+            # Parse attachments from JSON string to list
+            att = r.get("attachments")
+            if isinstance(att, str):
+                try: r["attachments"] = _json.loads(att)
+                except Exception: r["attachments"] = []
+            elif att is None:
+                r["attachments"] = []
+                
+            # Parse verification_images
+            v_img = r.get("verification_images")
+            if isinstance(v_img, str):
+                try: r["verification_images"] = _json.loads(v_img)
+                except Exception: r["verification_images"] = []
+            elif v_img is None:
+                r["verification_images"] = []
+                
         return jsonify({"success": True, "data": to_camel(rows)})
     except Exception as e:
         return jsonify({"success": False, "error": str(e), "data": []}), 500
@@ -295,10 +354,10 @@ def create_issue():
             INSERT INTO issues (
                 external_id, title, description, category, category_name,
                 status, status_name, priority, department, village_id,
-                reported_by_id, reported_by_name, reported_date, votes, location
+                reported_by_id, reported_by_name, reported_date, votes, location, attachments
             ) VALUES (%s, %s, %s, %s, %s,
                       %s, %s, %s, %s, %s,
-                      %s, %s, %s, %s, %s)
+                      %s, %s, %s, %s, %s, %s)
             """,
             (
                 external_id,
@@ -316,6 +375,7 @@ def create_issue():
                 reported_date,
                 0,
                 location,
+                __import__('json').dumps(data.get("attachments") or []),
             ),
             commit=True,
         )
@@ -367,6 +427,50 @@ def issue_vote(issue_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# Delete an issue (only by the reporter)
+@app.route("/api/issues/<issue_id>", methods=["DELETE"])
+def delete_issue(issue_id):
+    data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id") or data.get("userId") or request.args.get("user_id")
+
+    if not user_id:
+        return jsonify({"success": False, "error": "user_id is required"}), 400
+
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "user_id must be numeric"}), 400
+
+    try:
+        # Look up the issue — try numeric id first, then external_id
+        issue = None
+        try:
+            numeric_id = int(issue_id)
+            issue = run_query_one("SELECT id, reported_by_id FROM issues WHERE id = %s", (numeric_id,))
+        except (TypeError, ValueError):
+            pass
+
+        if not issue:
+            issue = run_query_one("SELECT id, reported_by_id FROM issues WHERE external_id = %s", (str(issue_id),))
+
+        if not issue:
+            return jsonify({"success": False, "error": "Issue not found (id=" + str(issue_id) + ")"}), 404
+
+        if int(issue["reported_by_id"]) != int(user_id):
+            return jsonify({"success": False, "error": "You can only delete your own issues"}), 403
+
+        real_id = issue["id"]
+        try:
+            run_query("DELETE FROM issue_votes WHERE issue_id = %s", (real_id,), commit=True)
+        except Exception:
+            pass  # No votes to delete is fine
+        run_query("DELETE FROM issues WHERE id = %s", (real_id,), commit=True)
+
+        return jsonify({"success": True, "message": "Issue deleted successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 # ---------- Budget ----------
 @app.route("/api/budget")
 def get_budget():
@@ -385,18 +489,335 @@ def get_budget():
             return jsonify({"success": True, "data": {"totalReceived": 0, "totalSpent": 0, "pendingApproval": 0, "available": 0, "fiscalYear": "", "projects": []}})
         vid = village_id or row.get("village_id")
         projects = run_query(
-            "SELECT external_id, name, sanctioned, released, spent, progress, status, contractor, start_date, deadline, completed_date, verifications_photos, verifications_gps, verifications_community, verifications_audit FROM projects WHERE village_id = %s ORDER BY id",
+            "SELECT id, external_id, name, sanctioned, released, spent, progress, status, contractor, category, start_date, deadline, completed_date, verifications_site_inspection, verifications_photos, verifications_materials, verifications_gps, verifications_community, verifications_audit, verification_images FROM projects WHERE village_id = %s ORDER BY id",
             (vid,),
         ) if vid else run_query(
-            "SELECT external_id, name, sanctioned, released, spent, progress, status, contractor, start_date, deadline, completed_date, verifications_photos, verifications_gps, verifications_community, verifications_audit FROM projects ORDER BY id LIMIT 20"
+            "SELECT id, external_id, name, sanctioned, released, spent, progress, status, contractor, category, start_date, deadline, completed_date, verifications_site_inspection, verifications_photos, verifications_materials, verifications_gps, verifications_community, verifications_audit, verification_images FROM projects ORDER BY id LIMIT 20"
         )
+        
+        import json as _json
+        for p in projects:
+            v_img = p.get("verification_images")
+            if isinstance(v_img, str):
+                try: p["verification_images"] = _json.loads(v_img)
+                except: p["verification_images"] = []
+            elif v_img is None:
+                p["verification_images"] = []
+
+        # Auto-recalculate total_spent and pending from actual project data
+        real_spent = sum(float(p.get("spent", 0) or 0) for p in projects)
+        real_pending = sum(
+            max(0, float(p.get("sanctioned", 0) or 0) - float(p.get("spent", 0) or 0))
+            for p in projects if str(p.get("status") or "").lower() not in ["completed", "closed", "resolved"]
+        )
+        real_sanctioned = sum(
+            float(p.get("sanctioned", 0) or 0) 
+            for p in projects if str(p.get("status") or "").lower() not in ["completed", "closed", "resolved"]
+        )
+        total_received = float(row.get("total_received", 0) or 0)
+
         out = dict(row)
+        out["total_spent"] = real_spent
+        out["pending_approval"] = real_pending
+        out["sanctioned_funds"] = real_sanctioned
+        out["available"] = total_received - real_spent - real_pending
         out["projects"] = [dict(p) for p in projects]
         out["last_updated"] = str(out.get("last_updated") or "")
         return jsonify({"success": True, "data": to_camel(out)})
     except Exception as e:
         return jsonify({"success": True, "data": {"totalReceived": 0, "totalSpent": 0, "pendingApproval": 0, "available": 0, "fiscalYear": "", "projects": []}})
 
+@app.route("/api/projects", methods=["POST"])
+def create_project():
+    """Create a new project/budget item (admin/sarpanch action)."""
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    category = (data.get("category") or "other").strip()
+    sanctioned = data.get("sanctioned")
+    village_id = data.get("village_id") or data.get("villageId")
+    
+    if not name or sanctioned is None or not village_id:
+        return jsonify({"success": False, "error": "Name, sanctioned amount, and village_id are required"}), 400
+        
+    try:
+        sanctioned = float(sanctioned)
+        village_id = int(village_id)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "sanctioned must be a number and village_id must be an integer"}), 400
+
+    from datetime import date
+    import uuid
+    external_id = f"PRJ-{uuid.uuid4().hex[:6].upper()}"
+    start_date = date.today()
+    status = "in_progress"
+
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Insert the project
+                cur.execute(
+                    """
+                    INSERT INTO projects (
+                        external_id, village_id, name, sanctioned, released, spent,
+                        progress, status, start_date
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (external_id, village_id, name, sanctioned, 0, 0, 0, status, start_date)
+                )
+                proj_id = cur.fetchone()["id"]
+                
+                import re
+                safe_name = re.sub(r'[^A-Za-z0-9]', '_', name)
+                folder_path = os.path.join(UPLOAD_FOLDER, f"Project_{proj_id}_{safe_name}")
+                os.makedirs(folder_path, exist_ok=True)
+                
+                # Update budget summary
+                cur.execute(
+                    """
+                    UPDATE budget_summary
+                    SET pending_approval = COALESCE(pending_approval, 0) + %s
+                    WHERE village_id = %s
+                    """,
+                    (sanctioned, village_id)
+                )
+                
+                # Log activity
+                cur.execute(
+                    """
+                    INSERT INTO activities (external_id, village_id, type, title, description, reference, icon)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    ("ACT-" + external_id, village_id, "approval", "New Project Created", f"Project '{name}' was created.", f"Project: {external_id}", "add_circle_outline")
+                )
+                conn.commit()
+                
+                cur.execute(
+                    "SELECT external_id, name, sanctioned, released, spent, progress, status, contractor, start_date, deadline, completed_date FROM projects WHERE id = %s",
+                    (proj_id,)
+                )
+                new_proj = cur.fetchone()
+
+        return jsonify({"success": True, "data": to_camel(dict(new_proj))}), 201
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/issues/<issue_id>/assign_contractor", methods=["POST"])
+def assign_issue_to_contractor(issue_id):
+    """Assign a complaint/issue to a contractor by creating a project from it."""
+    data = request.get_json(silent=True) or {}
+    contractor_name = data.get("contractor_name") or data.get("contractorName")
+    user_id = data.get("user_id") or request.args.get("user_id")
+
+    if not contractor_name:
+        return jsonify({"success": False, "error": "contractor_name is required"}), 400
+
+    try:
+        # Look up the issue (by numeric id or external_id)
+        issue = None
+        try:
+            issue = run_query_one("SELECT * FROM issues WHERE id = %s", (int(issue_id),))
+        except (ValueError, TypeError):
+            pass
+        if not issue:
+            issue = run_query_one("SELECT * FROM issues WHERE external_id = %s", (str(issue_id),))
+        if not issue:
+            return jsonify({"success": False, "error": "Issue not found"}), 404
+
+        import uuid, datetime
+        external_proj_id = "PRJ-" + uuid.uuid4().hex[:8].upper()
+        village_id = issue["village_id"]
+        
+        # Determine sanctioned amount (either provided by frontend or fallback to category defaults)
+        sanctioned_amount = data.get("sanctioned_amount")
+        if sanctioned_amount is None:
+            cat_to_sanctioned = {
+                "water": 285000, "roads": 450000, "electricity": 175000,
+                "sanitation": 120000, "education": 200000, "other": 150000
+            }
+            sanctioned_amount = cat_to_sanctioned.get((issue.get("category") or "other").lower(), 150000)
+            
+        sanctioned = float(sanctioned_amount)
+
+        # Create project from issue
+        row = run_query(
+            """
+            INSERT INTO projects (external_id, village_id, name, sanctioned, released, spent,
+                progress, status, contractor, category, start_date, deadline)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING *
+            """,
+            (
+                external_proj_id,
+                village_id,
+                issue["title"] or "Unnamed Project",
+                sanctioned,
+                0, 0, 0,
+                "in_progress",
+                contractor_name,
+                issue.get("category") or "other",
+                datetime.date.today(),
+                datetime.date.today() + datetime.timedelta(days=90),
+            ),
+            commit=True
+        )
+        new_project = row[0] if row else None
+
+        # Update issue status to in_progress, mark contractor, and link project
+        run_query(
+            "UPDATE issues SET status = 'in_progress', status_name = 'In Progress', contractor = %s, project_id = %s WHERE id = %s",
+            (contractor_name, new_project["id"] if new_project else None, issue["id"]),
+            commit=True
+        )
+
+        # Log activity
+        try:
+            run_query(
+                "INSERT INTO activities (village_id, type, title, description, reference, icon) VALUES (%s,%s,%s,%s,%s,%s)",
+                (village_id, "project_assigned", "Contractor Assigned",
+                 f"Issue '{issue['title']}' assigned to {contractor_name}.",
+                 external_proj_id, "engineering"),
+                commit=True
+            )
+        except Exception:
+            pass
+
+        return jsonify({"success": True, "data": to_camel(dict(new_project)) if new_project else {}}), 201
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/projects/<project_id>/assign", methods=["POST"])
+def assign_project(project_id):
+    """Assign a contractor to a project."""
+    data = request.get_json() or {}
+    contractor_name = data.get("contractor_name")
+    
+    if not contractor_name:
+        return jsonify({"success": False, "error": "contractor_name required"}), 400
+        
+    try:
+        updated = run_query(
+            "UPDATE projects SET contractor = %s, status = 'in_progress' WHERE id = %s RETURNING *",
+            (contractor_name, project_id),
+            commit=True
+        )
+        if not updated:
+            return jsonify({"success": False, "error": "Project not found or could not be updated"}), 404
+            
+        project = updated[0]
+        
+        # Log activity
+        run_query(
+            "INSERT INTO activities (village_id, type, title, description, reference, icon) VALUES (%s, %s, %s, %s, %s, %s)",
+            (
+                project['village_id'], 'project_assigned', f"Contractor Assigned",
+                f"Project '{project['name']}' assigned to {contractor_name}.",
+                f"PRJ-{project_id}", 'engineering'
+            ),
+            commit=True
+        )
+        return jsonify({"success": True, "data": to_camel(dict(project))}), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/projects/<project_id>/verify_step", methods=["POST"])
+def verify_project_step(project_id):
+    """Toggle a verification step for a project."""
+    data = request.get_json() or {}
+    step = data.get("step")
+    photo_url = data.get("photo_url")
+    
+    valid_steps = [
+        "verifications_site_inspection",
+        "verifications_photos",
+        "verifications_materials",
+        "verifications_gps",
+        "verifications_community",
+        "verifications_audit"
+    ]
+    if step not in valid_steps:
+        return jsonify({"success": False, "error": "Invalid verification step. Valid: " + str(valid_steps)}), 400
+        
+    try:
+        # Fetch current project to get existing images
+        curr_proj = run_query_one("SELECT verification_images FROM projects WHERE id = %s", (project_id,))
+        if not curr_proj:
+            return jsonify({"success": False, "error": "Project not found"}), 404
+            
+        import json
+        images = []
+        if curr_proj.get("verification_images"):
+            try:
+                images = curr_proj["verification_images"]
+                if isinstance(images, str):
+                    images = json.loads(images)
+            except:
+                pass
+                
+        if photo_url and photo_url not in images:
+            images.append(photo_url)
+            
+        # Ensure the column exists (auto-migrate)
+        try:
+            run_query(f"ALTER TABLE projects ADD COLUMN IF NOT EXISTS {step} BOOLEAN DEFAULT FALSE", commit=True)
+        except Exception:
+            pass
+            
+        updated = run_query(
+            f"UPDATE projects SET {step} = TRUE, verification_images = %s::jsonb WHERE id = %s RETURNING *",
+            (json.dumps(images), project_id),
+            commit=True
+        )
+        if not updated:
+            return jsonify({"success": False, "error": "Project not found"}), 404
+            
+        project = updated[0]
+        
+        # Calculate new progress percentage
+        completed_count = sum(1 for s in valid_steps if project.get(s) is True)
+        progress_pct = round((completed_count / 6.0) * 100)
+        status_update = ", status = 'completed', completed_date = CURRENT_DATE" if completed_count == 6 else ""
+        
+        # Save new progress to database
+        updated_prog = run_query(
+            f"UPDATE projects SET progress = %s{status_update} WHERE id = %s RETURNING *",
+            (progress_pct, project_id),
+            commit=True
+        )
+        if updated_prog:
+            project = updated_prog[0]
+            
+        if completed_count == 6:
+            run_query(
+                "UPDATE issues SET status = 'resolved', status_name = 'Resolved / Completed' WHERE project_id = %s",
+                (project_id,),
+                commit=True
+            )
+
+        step_name = step.replace("verifications_", "").replace("_", " ").capitalize()
+        
+        run_query(
+            "INSERT INTO activities (village_id, type, title, description, reference, icon) VALUES (%s, %s, %s, %s, %s, %s)",
+            (
+                project['village_id'], 'verification', f"Work Verified",
+                f"Verification step '{step_name}' completed for project '{project['name']}'.",
+                f"PRJ-{project_id}", 'verified'
+            ),
+            commit=True
+        )
+        
+        return jsonify({"success": True, "data": to_camel(dict(project))}), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/projects/<project_id>/approve", methods=["POST"])
 def approve_project(project_id):
@@ -501,6 +922,69 @@ def run_custom_query():
         from queries import get_custom_result
         rows = get_custom_result()
         return jsonify({"success": True, "data": rows})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ---------- Admin Panel ----------
+@app.route("/api/admin/stats")
+def admin_stats():
+    """Get system-wide statistics for the admin dashboard."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Active villages
+                cur.execute("SELECT COUNT(*) as count FROM villages")
+                villages = cur.fetchone()["count"]
+                
+                # Registered users
+                cur.execute("SELECT COUNT(*) as count FROM users")
+                users = cur.fetchone()["count"]
+                
+                # Issues resolved
+                cur.execute("SELECT COUNT(*) as count FROM issues WHERE status = 'resolved'")
+                resolved = cur.fetchone()["count"]
+                
+                # Total funds tracked
+                cur.execute("SELECT SUM(sanctioned) as total FROM projects")
+                res = cur.fetchone()
+                funds = float(res["total"] or 0)
+                
+                return jsonify({"success": True, "data": {
+                    "activeVillages": villages,
+                    "registeredUsers": users,
+                    "issuesResolved": resolved,
+                    "totalFundsTracked": funds
+                }})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/admin/users")
+def admin_users():
+    """Get a list of all users for the admin directory."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT u.id, u.external_id, u.name, u.role, u.mobile, v.name as village_name 
+                    FROM users u
+                    LEFT JOIN villages v ON u.village_id = v.id
+                    ORDER BY u.id DESC
+                """)
+                users = cur.fetchall()
+                # Manually map role logic since to_camel doesn't format enums nicely
+                return jsonify({"success": True, "data": to_camel(users)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/admin/alerts")
+def admin_alerts():
+    """Get recent high-priority activities or system alerts for admin."""
+    try:
+        # Reusing the existing activities log but limited to 'approval' or 'verification' roughly simulating alerts
+        rows = run_query(
+            "SELECT id, external_id, type, title, description, reference, icon, created_at FROM activities ORDER BY created_at DESC LIMIT 5"
+        )
+        return jsonify({"success": True, "data": to_camel(rows)})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

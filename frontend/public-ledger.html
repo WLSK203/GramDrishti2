@@ -577,16 +577,16 @@
                 </div>
                 <div class="bar-legend">
                     <span id="ledgerReleasedLabel">Released (0%)</span>
-                    <span id="ledgerPendingLabel">Pending (0%)</span>
+                    <span id="ledgerPendingLabel">Sanctioned (0%)</span>
                 </div>
             </div>
             <div class="summary-card warning">
                 <div class="summary-label">
                     <span class="material-symbols-outlined">hourglass_empty</span>
-                    Pending Approvals
+                    Sanctioned Funds
                 </div>
                 <div class="summary-amount" id="ledgerPendingApproval">—</div>
-                <p class="summary-sub">Projects awaiting release</p>
+                <p class="summary-sub">Funds committed to active projects</p>
             </div>
         </div>
 
@@ -635,18 +635,19 @@
                 var total = budget.totalReceived || 0;
                 var spent = budget.totalSpent || 0;
                 var pending = budget.pendingApproval || 0;
+                var sanctioned = budget.sanctionedFunds !== undefined ? budget.sanctionedFunds : pending;
                 
                 document.getElementById('ledgerTotalReceived').textContent = fmt(total);
                 
                 document.getElementById('ledgerSpent').textContent = fmt(spent);
-                document.getElementById('ledgerPendingApproval').textContent = fmt(pending);
+                document.getElementById('ledgerPendingApproval').textContent = fmt(sanctioned);
                 document.getElementById('ledgerFiscalSub').textContent = (budget.fiscalYear || 'FY 2024-25') + (budget.lastUpdated ? ' • Updated ' + budget.lastUpdated : '');
                 var pctReleased = total ? Math.round((spent / total) * 100) : 0;
                 var pctPending = total ? Math.round((pending / total) * 100) : 0;
                 document.getElementById('ledgerBarSpent').style.width = pctReleased + '%';
                 document.getElementById('ledgerBarPending').style.width = pctPending + '%';
                 document.getElementById('ledgerReleasedLabel').textContent = 'Released (' + pctReleased + '%)';
-                document.getElementById('ledgerPendingLabel').textContent = 'Pending (' + pctPending + '%)';
+                document.getElementById('ledgerPendingLabel').textContent = 'Sanctioned (' + pctPending + '%)';
                 var projects = budget.projects || [];
                 var listEl = document.getElementById('ledgerProjectsList');
                 if (!projects.length) listEl.innerHTML = '<p>No projects to display.</p>';

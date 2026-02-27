@@ -34,7 +34,6 @@
                 <a href="pending-approvals.html" class="nav-item">
                     <span class="material-symbols-outlined">task_alt</span>
                     <span>Pending Approvals</span>
-                    <span class="nav-badge">5</span>
                 </a>
                 <a href="active-projects.html" class="nav-item">
                     <span class="material-symbols-outlined">construction</span>
@@ -47,7 +46,6 @@
                 <a href="community-issues.html" class="nav-item active">
                     <span class="material-symbols-outlined">campaign</span>
                     <span>Community Issues</span>
-                    <span class="nav-badge warning">12</span>
                 </a>
                 <a href="contractor-verification.html" class="nav-item">
                     <span class="material-symbols-outlined">verified</span>
@@ -204,8 +202,20 @@
                 var location = escapeHtml(i.location || '—');
                 var dateStr = escapeHtml(GramSabha.formatDate(i.reportedDate || i.createdAt));
                 var issueId = escapeHtml(String(i.id || ''));
+                
+                var proofHtml = '';
+                var proofs = i.verificationImages || [];
+                if (proofs.length > 0 && i.progress >= 100) {
+                    var base = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
+                    proofHtml = '<div style="margin-top:0.5rem; display:flex; gap:0.35rem; flex-wrap:wrap;">' +
+                        proofs.map(function(url) {
+                            return '<img src="' + base + url + '" style="width:34px;height:34px;object-fit:cover;border-radius:.25rem;cursor:pointer;border:1px solid #86efac" onclick="window.open(\'' + base + url + '\',\'_blank\')" title="Completion Proof">';
+                        }).join('') +
+                        '</div>';
+                }
+
                 return '<tr class="' + (i.priority === 'urgent' ? 'urgent-row' : '') + '">' +
-                    '<td><div class="issue-info"><strong>' + title + '</strong><span>' + desc + '</span></div></td>' +
+                    '<td><div class="issue-info"><strong>' + title + '</strong><span>' + desc + '</span>'+ proofHtml +'</div></td>' +
                     '<td><span class="category-badge ' + escapeHtml(cat) + '">' + catLabel + '</span></td>' +
                     '<td>' + location + '</td>' +
                     '<td><div class="votes-cell"><span class="material-symbols-outlined" aria-hidden="true">thumb_up</span><span>' + (i.votes || 0) + '</span></div></td>' +

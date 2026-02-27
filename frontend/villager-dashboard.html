@@ -130,7 +130,7 @@
             <span class="material-symbols-outlined">construction</span>
         </div>
         <div>
-            <p class="db-stat-num">4</p>
+            <p class="db-stat-num" id="activeProjStat">—</p>
             <p class="db-stat-lbl">Active Projects</p>
         </div>
     </div>
@@ -139,7 +139,7 @@
             <span class="material-symbols-outlined">verified</span>
         </div>
         <div>
-            <p class="db-stat-num">2</p>
+            <p class="db-stat-num" id="verifiedStat">—</p>
             <p class="db-stat-lbl">Verified Works</p>
         </div>
     </div>
@@ -170,32 +170,32 @@
                 <a href="raise-issue.html?category=water" class="db-cat-card water" role="listitem">
                     <span class="material-symbols-outlined" aria-hidden="true">water_drop</span>
                     <span class="db-cat-label">Water</span>
-                    <span class="db-cat-count" aria-label="12 water issues">12</span>
+                    <span class="db-cat-count" id="catCountWater" aria-label="water issues">0</span>
                 </a>
                 <a href="raise-issue.html?category=roads" class="db-cat-card roads" role="listitem">
                     <span class="material-symbols-outlined" aria-hidden="true">add_road</span>
                     <span class="db-cat-label">Roads</span>
-                    <span class="db-cat-count" aria-label="8 road issues">8</span>
+                    <span class="db-cat-count" id="catCountRoads" aria-label="road issues">0</span>
                 </a>
                 <a href="raise-issue.html?category=electricity" class="db-cat-card electricity" role="listitem">
                     <span class="material-symbols-outlined" aria-hidden="true">electric_bolt</span>
                     <span class="db-cat-label">Power</span>
-                    <span class="db-cat-count" aria-label="5 electricity issues">5</span>
+                    <span class="db-cat-count" id="catCountElectricity" aria-label="electricity issues">0</span>
                 </a>
                 <a href="raise-issue.html?category=sanitation" class="db-cat-card sanitation" role="listitem">
                     <span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span>
                     <span class="db-cat-label">Sanitation</span>
-                    <span class="db-cat-count" aria-label="7 sanitation issues">7</span>
+                    <span class="db-cat-count" id="catCountSanitation" aria-label="sanitation issues">0</span>
                 </a>
                 <a href="raise-issue.html?category=education" class="db-cat-card education" role="listitem">
                     <span class="material-symbols-outlined" aria-hidden="true">school</span>
                     <span class="db-cat-label">Education</span>
-                    <span class="db-cat-count" aria-label="3 education issues">3</span>
+                    <span class="db-cat-count" id="catCountEducation" aria-label="education issues">0</span>
                 </a>
                 <a href="raise-issue.html?category=other" class="db-cat-card other" role="listitem">
                     <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
                     <span class="db-cat-label">Other</span>
-                    <span class="db-cat-count" aria-label="4 other issues">4</span>
+                    <span class="db-cat-count" id="catCountOther" aria-label="other issues">0</span>
                 </a>
             </div>
         </div>
@@ -254,11 +254,11 @@
                     </div>
                     <span class="db-quick-label">Voice Report</span>
                 </button>
-                <a href="contractor-verification.html" class="db-quick-card" role="listitem">
+                <a href="villager-projects.html" class="db-quick-card" role="listitem">
                     <div class="db-quick-icon purple" aria-hidden="true">
-                        <span class="material-symbols-outlined">verified</span>
+                        <span class="material-symbols-outlined">construction</span>
                     </div>
-                    <span class="db-quick-label">Verify Work</span>
+                    <span class="db-quick-label">Village Projects</span>
                 </a>
             </div>
         </div>
@@ -319,37 +319,8 @@
                 </a>
             </div>
 
-            <div class="db-my-issue">
-                <div class="db-my-icon water" aria-hidden="true">
-                    <span class="material-symbols-outlined">water_drop</span>
-                </div>
-                <div style="flex:1;min-width:0">
-                    <p class="db-my-title">Broken Hand Pump — Ward 4</p>
-                    <p class="db-my-date">Feb 5, 2024</p>
-                </div>
-                <span class="db-status-dot reviewing" title="Under Review" aria-label="Under Review"></span>
-            </div>
-
-            <div class="db-my-issue">
-                <div class="db-my-icon roads" aria-hidden="true">
-                    <span class="material-symbols-outlined">add_road</span>
-                </div>
-                <div style="flex:1;min-width:0">
-                    <p class="db-my-title">Pothole near School</p>
-                    <p class="db-my-date">Jan 28, 2024</p>
-                </div>
-                <span class="db-status-dot progress" title="In Progress" aria-label="In Progress"></span>
-            </div>
-
-            <div class="db-my-issue">
-                <div class="db-my-icon electricity" aria-hidden="true">
-                    <span class="material-symbols-outlined">electric_bolt</span>
-                </div>
-                <div style="flex:1;min-width:0">
-                    <p class="db-my-title">Street Light Not Working</p>
-                    <p class="db-my-date">Jan 15, 2024</p>
-                </div>
-                <span class="db-status-dot resolved" title="Resolved" aria-label="Resolved"></span>
+            <div id="myIssuesContainer">
+                <div style="padding:1.25rem;text-align:center;color:#94a3b8;font-size:0.8125rem;">Loading your issues...</div>
             </div>
 
             <!-- Status legend -->
@@ -489,6 +460,17 @@
                 if (bars[0]) bars[0].style.width = pct + '%';
                 if (bars[1]) bars[1].style.width = (100 - pct) + '%';
             } catch(e) {}
+
+            // Update Active Projects & Verified counts from budget projects
+            try {
+                var budget2 = await GramSabha.getBudget(villageId);
+                if (budget2 && budget2.projects) {
+                    var activeCount = budget2.projects.filter(function(p) { return (p.status || '').toLowerCase() !== 'completed'; }).length;
+                    var verifiedCount = budget2.projects.filter(function(p) { return p.verificationsAudit === true || (p.status || '').toLowerCase() === 'completed'; }).length;
+                    document.getElementById('activeProjStat').textContent = activeCount;
+                    document.getElementById('verifiedStat').textContent = verifiedCount;
+                }
+            } catch(e) {}
         }
 
         // Issues
@@ -497,6 +479,18 @@
             var open = issues.filter(function(i) { return i.status !== 'resolved'; }).length;
             document.getElementById('openIssuesStat').textContent = open;
             populateIssues(issues);
+
+            // Update category count badges
+            var catCounts = { water: 0, roads: 0, electricity: 0, sanitation: 0, education: 0, other: 0 };
+            issues.forEach(function(iss) {
+                var c = (iss.category || 'other').toLowerCase();
+                if (catCounts.hasOwnProperty(c)) catCounts[c]++;
+                else catCounts.other++;
+            });
+            Object.keys(catCounts).forEach(function(key) {
+                var el = document.getElementById('catCount' + key.charAt(0).toUpperCase() + key.slice(1));
+                if (el) el.textContent = catCounts[key];
+            });
         } catch(e) {
             document.getElementById('issuesGrid').innerHTML =
                 '<div class="db-issue-empty">' +
@@ -505,6 +499,9 @@
                 '<a href="raise-issue.html">Report a new issue →</a>' +
                 '</div>';
         }
+
+        // Load My Reported Issues sidebar
+        loadMyIssues(user);
 
         // Dropdown toggle
         var pill    = document.getElementById('userPill');
@@ -550,6 +547,36 @@
             var voted      = issue.userVoted ? true : false;
             var votedClass = voted ? 'voted' : '';
             var voteIcon   = voted ? 'thumb_up' : 'thumb_up_off_alt';
+            var attachHtml = '';
+            var attachments = issue.attachments || [];
+            if (attachments.length > 0) {
+                var base = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
+                attachHtml = '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0">' +
+                    attachments.map(function(url) {
+                        var fullUrl = base + url;
+                        var isVideo = /\.(mp4|webm|mov|avi)$/i.test(url);
+                        if (isVideo) {
+                            return '<div style="width:60px;height:60px;border-radius:.5rem;background:#f1f5f9;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="window.open(\'' + fullUrl + '\',\'_blank\')">' +
+                                '<span class="material-symbols-outlined" style="color:#64748b;font-size:1.5rem">videocam</span></div>';
+                        }
+                        return '<img src="' + fullUrl + '" style="width:60px;height:60px;object-fit:cover;border-radius:.5rem;cursor:pointer;border:1px solid #e2e8f0" onclick="window.open(\'' + fullUrl + '\',\'_blank\')" alt="attachment">';
+                    }).join('') +
+                '</div>';
+            }
+            
+            var proofHtml = '';
+            var proofs = issue.verificationImages || [];
+            if (proofs.length > 0 && issue.progress >= 100) {
+                var base2 = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
+                proofHtml = '<div style="margin-top:0.5rem; margin-bottom:0.5rem; padding:0.75rem; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:0.5rem;">' +
+                    '<p style="font-size:0.75rem; font-weight:700; color:#16a34a; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.25rem; text-transform:uppercase;"><span class="material-symbols-outlined" style="font-size:1.1rem;">verified</span> Completion Proof</p>' +
+                    '<div style="display:flex;gap:.5rem;flex-wrap:wrap;">' +
+                    proofs.map(function(url) {
+                        return '<img src="' + base2 + url + '" style="width:45px;height:45px;object-fit:cover;border-radius:.25rem;cursor:pointer;border:1px solid #86efac" onclick="window.open(\'' + base2 + url + '\',\'_blank\')" alt="Proof Photo">';
+                    }).join('') +
+                    '</div></div>';
+            }
+
             return (
                 '<article class="db-issue-card db-animate">' +
                   '<div class="db-issue-top">' +
@@ -560,6 +587,8 @@
                   '</div>' +
                   '<h3 class="db-issue-title">' + title + '</h3>' +
                   '<p class="db-issue-desc">' + desc + '</p>' +
+                  attachHtml +
+                  proofHtml +
                   '<div class="db-issue-meta">' +
                     '<span><span class="material-symbols-outlined" aria-hidden="true">person</span> ' + byName + '</span>' +
                     '<span><span class="material-symbols-outlined" aria-hidden="true">calendar_today</span> ' + dateStr + '</span>' +
@@ -630,6 +659,99 @@
             }).catch(function() {
                 GramSabha.showNotification('Could not copy link', 'error');
             });
+        }
+    }
+
+    /* ── Load My Reported Issues ─────────────── */
+    async function loadMyIssues(user) {
+        var container = document.getElementById('myIssuesContainer');
+        try {
+            var villageId = user.villageId || user.village_id || 1;
+            var issues = await GramSabha.getIssues(villageId);
+            
+            // Filter to only the current user's issues
+            var myIssues = (issues || []).filter(function(iss) {
+                return iss.reportedById == user.id || iss.reported_by_id == user.id;
+            });
+
+            if (myIssues.length === 0) {
+                container.innerHTML = '<div style="padding:1.25rem;text-align:center;color:#94a3b8;font-size:0.8125rem;">No issues reported yet. <a href="raise-issue.html" style="color:var(--primary);font-weight:700">Report one now!</a></div>';
+                return;
+            }
+
+            var catIcons = {
+                water: 'water_drop', roads: 'add_road', electricity: 'electric_bolt',
+                sanitation: 'delete_sweep', education: 'school', other: 'more_horiz'
+            };
+
+            container.innerHTML = myIssues.slice(0, 5).map(function(iss) {
+                var cat = (iss.category || 'other').toLowerCase();
+                var icon = catIcons[cat] || 'report';
+                var status = (iss.status || 'submitted').toLowerCase();
+                var dotClass = status === 'resolved' ? 'resolved' : (status === 'in_progress' ? 'progress' : 'reviewing');
+                var statusLabel = status === 'resolved' ? 'Resolved' : (status === 'in_progress' ? 'In Progress' : 'Under Review');
+                var dateStr = iss.reportedDate || iss.reported_date || '';
+                if (dateStr) {
+                    try { dateStr = new Date(dateStr).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }); } catch(e) {}
+                }
+                var issId = iss.numericId || iss.numeric_id || iss.id || '';
+                return '<div class="db-my-issue" style="position:relative">' +
+                    '<div class="db-my-icon ' + cat + '" aria-hidden="true">' +
+                        '<span class="material-symbols-outlined">' + icon + '</span>' +
+                    '</div>' +
+                    '<div style="flex:1;min-width:0">' +
+                        '<p class="db-my-title">' + (iss.title || 'Untitled') + '</p>' +
+                        '<p class="db-my-date">' + dateStr + '</p>' +
+                    '</div>' +
+                    '<span class="db-status-dot ' + dotClass + '" title="' + statusLabel + '" aria-label="' + statusLabel + '"></span>' +
+                    '<button onclick="deleteMyIssue(' + issId + ')" title="Delete this complaint" style="' +
+                        'position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;' +
+                        'background:#fee2e2;color:#dc2626;border:1px solid #fecaca;font-size:0.75rem;' +
+                        'cursor:pointer;display:flex;align-items:center;justify-content:center;' +
+                        'transition:all .2s;line-height:1;padding:0;' +
+                    '" onmouseover="this.style.background=\'#dc2626\';this.style.color=\'white\'" onmouseout="this.style.background=\'#fee2e2\';this.style.color=\'#dc2626\'">' +
+                        '<span class="material-symbols-outlined" style="font-size:.875rem">close</span>' +
+                    '</button>' +
+                '</div>';
+            }).join('');
+        } catch(err) {
+            container.innerHTML = '<div style="padding:1.25rem;text-align:center;color:#ef4444;font-size:0.8125rem;">Could not load your issues.</div>';
+            console.error(err);
+        }
+    }
+
+    /* ── Delete My Issue ────────────────────────── */
+    async function deleteMyIssue(issueId) {
+        if (!confirm('Are you sure you want to delete this complaint?')) return;
+        var user = GramSabha.getCurrentUser();
+        // Fallback: read session directly if getCurrentUser() returns null
+        if (!user) {
+            try { user = JSON.parse(localStorage.getItem('gram_sabha_session')); } catch(e) {}
+        }
+        if (!user || !user.id) { GramSabha.showNotification('Please log in again.', 'error'); return; }
+
+        var apiBase = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
+
+        try {
+            var res = await fetch(apiBase + '/api/issues/' + issueId + '?user_id=' + user.id, {
+                method: 'DELETE'
+            });
+            var text = await res.text();
+            var data = text ? JSON.parse(text) : {};
+            if (data.success) {
+                GramSabha.showNotification('Complaint deleted successfully!', 'success');
+                // Re-render the list
+                var villageId = user.villageId || user.village_id || 1;
+                var issues = await GramSabha.getIssues(villageId, user.id);
+                var open = issues.filter(function(i) { return i.status !== 'resolved'; }).length;
+                document.getElementById('openIssuesStat').textContent = open;
+                populateIssues(issues);
+                loadMyIssues(user);
+            } else {
+                GramSabha.showNotification(data.error || 'Could not delete', 'error');
+            }
+        } catch(err) {
+            GramSabha.showNotification(err.message || 'Delete failed', 'error');
         }
     }
 
