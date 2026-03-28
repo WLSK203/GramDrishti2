@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contractors | GRAM-SABHA</title>
+    <title>Contractors | GRAM-DRISHTI</title>
     <meta name="description" content="Manage registered contractors for village development projects">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -269,7 +269,7 @@
                     <span class="material-symbols-outlined">account_balance</span>
                 </div>
                 <div class="sidebar-logo-text">
-                    <p class="sidebar-brand-name"><strong>GRAM-SABHA</strong></p>
+                    <p class="sidebar-brand-name"><strong>GRAM-DRISHTI</strong></p>
                     <p>Sarpanch Portal</p>
                 </div>
             </a>
@@ -313,7 +313,7 @@
                     <p class="sidebar-user-name" id="sidebarUserName">Ramesh Kumar</p>
                     <p class="sidebar-user-role" id="sidebarUserRole">Sarpanch</p>
                 </div>
-                <button onclick="GramSabha.logout()" class="sidebar-logout" aria-label="Logout">
+                <button onclick="GramDrishti.logout()" class="sidebar-logout" aria-label="Logout">
                     <span class="material-symbols-outlined" aria-hidden="true">logout</span>
                 </button>
             </div>
@@ -442,7 +442,8 @@
     </div>
 </div>
 
-<script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
 <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
 <script>
@@ -558,7 +559,7 @@ function escapeHtml(str) {
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', function() {
-    var user = GramSabha.requireAuth(['sarpanch']);
+    var user = GramDrishti.requireAuth(['sarpanch']);
     if (!user) return;
 
     document.getElementById('sidebarUserName').textContent = user.name || '—';
@@ -572,19 +573,19 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             var villageId = user.villageId || user.village_id || 1;
             var stat = document.getElementById('statTotalWork');
-            var bData = await GramSabha.getBudget(villageId);
+            var bData = await GramDrishti.getBudget(villageId);
             if (bData && bData.projects) {
                 var totalWorkValue = 0;
                 contractors.forEach(function(c) {
                     var myProjects = bData.projects.filter(function(p) { return p.contractor === c.name; });
                     c.projects = myProjects.length;
                     c.valueNum = myProjects.reduce(function(sum, p) { return sum + (p.sanctioned || 0); }, 0);
-                    c.value = GramSabha.formatCurrency(c.valueNum);
+                    c.value = GramDrishti.formatCurrency(c.valueNum);
                     totalWorkValue += c.valueNum;
                 });
                 localStorage.setItem('gs_contractors', JSON.stringify(contractors));
                 // Update the global total work stat if element exists
-                if (stat) stat.textContent = GramSabha.formatCurrency(totalWorkValue);
+                if (stat) stat.textContent = GramDrishti.formatCurrency(totalWorkValue);
                 renderCards();
             }
         } catch(e) { console.warn('Contractor DB sync failed:', e); }
@@ -595,12 +596,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var issueParam = urlParams.get('issue');
     if (issueParam) {
         _currentIssueId = issueParam;
-        // Fetch issue details
-        var apiBase = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
-        fetch(apiBase + '/api/issues?village_id=' + (user.villageId || user.village_id || 1) + '&user_id=' + user.id)
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-                var allIssues = d.data || [];
+        // Fetch issue details directly via GramDrishti
+        GramDrishti.getIssues()
+            .then(function(allIssues) {
                 _currentIssueData = allIssues.find(function(i) { return i.id === issueParam || String(i.numericId) === issueParam; });
                 // Show a top banner so sarpanch knows what they're assigning
                 var banner = document.createElement('div');
@@ -677,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('gs_contractors', JSON.stringify(contractors));
         closeAddModal();
         renderCards();
-        GramSabha.showNotification('Contractor ' + escapeHtml(cName) + ' registered successfully!', 'success');
+        GramDrishti.showNotification('Contractor ' + escapeHtml(cName) + ' registered successfully!', 'success');
     });
 
     document.getElementById('assignProjectForm').addEventListener('submit', async function(e) {
@@ -690,29 +688,29 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.textContent = 'Assigning...';
         
         try {
-            await GramSabha.assignProject(projId, window.currentAssignee);
+            await GramDrishti.assignProject(projId, window.currentAssignee);
             // Sync contractor stats from real DB data
             var c = contractors.find(x => x.name === window.currentAssignee);
             if (c) {
                 c.status = 'busy';
                 // Recalculate projects + value from DB
                 try {
-                    var userSess = GramSabha.getCurrentUser() || JSON.parse(localStorage.getItem('gram_sabha_session') || '{}');
-                    var bData = await GramSabha.getBudget(userSess.villageId || userSess.village_id || 1);
+                    var userSess = GramDrishti.getCurrentUser() || JSON.parse(localStorage.getItem('gram_drishti_session') || '{}');
+                    var bData = await GramDrishti.getBudget(userSess.villageId || userSess.village_id || 1);
                     if (bData && bData.projects) {
                         var myProjects = bData.projects.filter(p => p.contractor === c.name);
                         c.projects = myProjects.length;
                         c.valueNum = myProjects.reduce(function(sum, p) { return sum + (p.sanctioned || 0); }, 0);
-                        c.value = GramSabha.formatCurrency(c.valueNum);
+                        c.value = GramDrishti.formatCurrency(c.valueNum);
                     }
                 } catch(_) {}
                 localStorage.setItem('gs_contractors', JSON.stringify(contractors));
             }
-            GramSabha.showNotification('Successfully assigned to ' + window.currentAssignee, 'success');
+            GramDrishti.showNotification('Successfully assigned to ' + window.currentAssignee, 'success');
             closeAssignModal();
             renderCards();
         } catch(err) {
-            GramSabha.showNotification(err.message || 'Assignment failed', 'error');
+            GramDrishti.showNotification(err.message || 'Assignment failed', 'error');
         } finally {
             btn.disabled = false;
             btn.textContent = 'Confirm Assignment';
@@ -914,15 +912,15 @@ window.assignProject = async function(name) {
         document.getElementById('assignProjectSelect').required = true;
         sel.innerHTML = '<option value="">Loading projects...</option>';
         try {
-            var userSession = GramSabha.getCurrentUser() || JSON.parse(localStorage.getItem('gram_sabha_session') || '{}');
+            var userSession = GramDrishti.getCurrentUser() || JSON.parse(localStorage.getItem('gram_drishti_session') || '{}');
             var villageId   = userSession.villageId || userSession.village_id || 1;
-            var budgetData  = await GramSabha.getBudget(villageId);
+            var budgetData  = await GramDrishti.getBudget(villageId);
             if (budgetData && budgetData.projects) {
                 var unassigned = budgetData.projects.filter(function(p) {
                     return !p.contractor && (p.status === 'pending' || p.status === 'approved' || p.status === 'pending_approval' || p.status === 'in_progress');
                 });
                 sel.innerHTML = unassigned.length
-                    ? unassigned.map(function(p) { return '<option value="' + p.id + '">' + p.name + ' (' + GramSabha.formatCurrency(p.sanctioned) + ')</option>'; }).join('')
+                    ? unassigned.map(function(p) { return '<option value="' + p.id + '">' + p.name + ' (' + GramDrishti.formatCurrency(p.sanctioned) + ')</option>'; }).join('')
                     : '<option value="">No unassigned projects available</option>';
             }
         } catch(err) {
@@ -936,26 +934,16 @@ document.getElementById('assignProjectForm').addEventListener('submit', async fu
     var btn = document.getElementById('assignSubmitBtn');
     btn.disabled = true;
     btn.textContent = 'Assigning...';
-    var apiBase = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
     try {
         if (_currentIssueId) {
-            // Issue-based assignment → call new endpoint
+            // Issue-based assignment → call the new Supabase SDK method
             var fundReq = document.getElementById('assignIssueFund').value;
-            var res = await fetch(apiBase + '/api/issues/' + _currentIssueId + '/assign_contractor', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    contractor_name: window.currentAssignee,
-                    sanctioned_amount: parseInt(fundReq) || 0
-                })
-            });
-            var data = await res.json();
-            if (!data.success) throw new Error(data.error || 'Assignment failed');
+            await GramDrishti.assignIssueToContractor(_currentIssueId, window.currentAssignee, parseInt(fundReq) || 0);
         } else {
             // Project-based assignment
             var projId = document.getElementById('assignProjectSelect').value;
-            if (!projId) { GramSabha.showNotification('Please select a project', 'error'); btn.disabled = false; btn.textContent = 'Confirm Assignment'; return; }
-            await GramSabha.assignProject(projId, window.currentAssignee);
+            if (!projId) { GramDrishti.showNotification('Please select a project', 'error'); btn.disabled = false; btn.textContent = 'Confirm Assignment'; return; }
+            await GramDrishti.assignProject(projId, window.currentAssignee);
         }
 
         // Sync contractor stats
@@ -963,19 +951,19 @@ document.getElementById('assignProjectForm').addEventListener('submit', async fu
         if (c) {
             c.status = 'busy';
             try {
-                var userSess = GramSabha.getCurrentUser() || JSON.parse(localStorage.getItem('gram_sabha_session') || '{}');
-                var bData = await GramSabha.getBudget(userSess.villageId || userSess.village_id || 1);
+                var userSess = GramDrishti.getCurrentUser() || JSON.parse(localStorage.getItem('gram_drishti_session') || '{}');
+                var bData = await GramDrishti.getBudget(userSess.villageId || userSess.village_id || 1);
                 if (bData && bData.projects) {
                     var myProjects = bData.projects.filter(function(p) { return p.contractor === c.name; });
                     c.projects  = myProjects.length;
                     c.valueNum  = myProjects.reduce(function(s, p) { return s + (p.sanctioned || 0); }, 0);
-                    c.value     = GramSabha.formatCurrency(c.valueNum);
+                    c.value     = GramDrishti.formatCurrency(c.valueNum);
                 }
             } catch(_) {}
             localStorage.setItem('gs_contractors', JSON.stringify(contractors));
         }
 
-        GramSabha.showNotification('✅ Successfully assigned to ' + window.currentAssignee, 'success');
+        GramDrishti.showNotification('✅ Successfully assigned to ' + window.currentAssignee, 'success');
         closeAssignModal();
         renderCards();
         // If we came from a specific issue, go back to sarpanch portal
@@ -983,7 +971,7 @@ document.getElementById('assignProjectForm').addEventListener('submit', async fu
             setTimeout(function() { window.location.href = 'sarpanch-portal.html'; }, 1200);
         }
     } catch(err) {
-        GramSabha.showNotification(err.message || 'Assignment failed', 'error');
+        GramDrishti.showNotification(err.message || 'Assignment failed', 'error');
     } finally {
         btn.disabled = false;
         btn.textContent = 'Confirm Assignment';

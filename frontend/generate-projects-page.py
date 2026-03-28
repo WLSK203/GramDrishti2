@@ -80,19 +80,19 @@ new_js = '''
         var allProjects = [];
         
         document.addEventListener('DOMContentLoaded', async function() {
-            var user = GramSabha.requireAuth();
+            var user = GramDrishti.requireAuth();
             if (!user) return;
 
             // Load header info
-            if (document.getElementById('villageName')) document.getElementById('villageName').textContent = user.village || 'GramSabha';
+            if (document.getElementById('villageName')) document.getElementById('villageName').textContent = user.village || 'GramDrishti';
             if (document.getElementById('userName')) document.getElementById('userName').textContent = user.name || 'Citizen';
             if (document.getElementById('userAvatar')) document.getElementById('userAvatar').textContent = (user.name || 'C').charAt(0).toUpperCase();
-            if (document.getElementById('welcomeMsg')) document.getElementById('welcomeMsg').textContent = GramSabha.getGreeting() + ', ' + (user.name ? user.name.split(' ')[0] : 'Citizen') + '!';
+            if (document.getElementById('welcomeMsg')) document.getElementById('welcomeMsg').textContent = GramDrishti.getGreeting() + ', ' + (user.name ? user.name.split(' ')[0] : 'Citizen') + '!';
             
             try {
-                var stats = await GramSabha.getBudget(user.villageId || user.village_id);
+                var stats = await GramDrishti.getBudget(user.villageId || user.village_id);
                 if (stats) {
-                    if (document.getElementById('totalFunds')) document.getElementById('totalFunds').textContent = GramSabha.formatCurrency(stats.totalReceived);
+                    if (document.getElementById('totalFunds')) document.getElementById('totalFunds').textContent = GramDrishti.formatCurrency(stats.totalReceived);
                     if (document.getElementById('fiscalYear')) document.getElementById('fiscalYear').textContent = (stats.fiscalYear || 'FY') + ' • Total Received';
                     
                     var spent = stats.totalSpent || 0;
@@ -102,8 +102,8 @@ new_js = '''
                     var pctA = total > 0 ? ((avail / total) * 100).toFixed(0) : 0;
                     
                     var bHtml = `
-                        <div class="db-brow"><div class="db-brow-top"><span class="db-brow-label">Spent</span><div style="text-align:right"><span class="db-brow-val">${GramSabha.formatCurrency(spent)}</span><span class="db-brow-pct"> · ${pctS}%</span></div></div><div class="db-bar"><div class="db-bar-fill orange" style="width:${pctS}%"></div></div></div>
-                        <div class="db-brow"><div class="db-brow-top"><span class="db-brow-label">Available</span><div style="text-align:right"><span class="db-brow-val">${GramSabha.formatCurrency(avail)}</span><span class="db-brow-pct"> · ${pctA}%</span></div></div><div class="db-bar"><div class="db-bar-fill green" style="width:${pctA}%"></div></div></div>
+                        <div class="db-brow"><div class="db-brow-top"><span class="db-brow-label">Spent</span><div style="text-align:right"><span class="db-brow-val">${GramDrishti.formatCurrency(spent)}</span><span class="db-brow-pct"> · ${pctS}%</span></div></div><div class="db-bar"><div class="db-bar-fill orange" style="width:${pctS}%"></div></div></div>
+                        <div class="db-brow"><div class="db-brow-top"><span class="db-brow-label">Available</span><div style="text-align:right"><span class="db-brow-val">${GramDrishti.formatCurrency(avail)}</span><span class="db-brow-pct"> · ${pctA}%</span></div></div><div class="db-bar"><div class="db-bar-fill green" style="width:${pctA}%"></div></div></div>
                     `;
                     if (document.getElementById('budgetBars')) document.getElementById('budgetBars').innerHTML = bHtml;
                     
@@ -140,7 +140,7 @@ new_js = '''
                 
                 var proofHtml = '';
                 if (p.verificationImages && p.verificationImages.length > 0) {
-                    var base = GramSabha.API_BASE || 'http://127.0.0.1:5000';
+                    var base = GramDrishti.API_BASE || 'http://127.0.0.1:5000';
                     proofHtml = '<div style="margin-top:1rem; padding:0.75rem; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:0.5rem;">' +
                         '<p style="font-size:0.75rem; font-weight:700; color:#16a34a; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.25rem; text-transform:uppercase;"><span class="material-symbols-outlined" style="font-size:1.1rem;">verified</span> Documented Proofs</p>' +
                         '<div style="display:flex;gap:.5rem;flex-wrap:wrap;">' +
@@ -159,7 +159,7 @@ new_js = '''
                         </span>
                     </div>
                     <h3 class="db-issue-title">${p.name}</h3>
-                    <p class="db-issue-desc" style="margin-top:0.25rem">Assigned to: <strong>${p.contractor || 'Dept.'}</strong> • Budget: <strong>${GramSabha.formatCurrency(p.sanctioned)}</strong></p>
+                    <p class="db-issue-desc" style="margin-top:0.25rem">Assigned to: <strong>${p.contractor || 'Dept.'}</strong> • Budget: <strong>${GramDrishti.formatCurrency(p.sanctioned)}</strong></p>
                     
                     <div style="margin-top: 1rem;">
                         <div style="display:flex; justify-content:space-between; font-size:0.875rem; font-weight:600; color:#475569; margin-bottom:0.5rem;">

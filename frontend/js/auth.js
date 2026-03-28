@@ -1,339 +1,380 @@
-/* =====================================================
-   GRAM-SABHA Authentication & API (DB-backed)
-   ===================================================== */
+/* ===================================================
+   GramDrishti — Supabase + Cloudinary API Layer
+   =================================================== */
 
-// API base URL (Flask backend); set in one place
-const API_BASE = (function() {
-    const u = document.querySelector('script[data-api-base]');
-    if (u && u.dataset.apiBase) return u.dataset.apiBase.replace(/\/$/, '');
-    return 'http://127.0.0.1:5000';
-})();
+// ── Config (replace with your actual values) ──────────
+const SUPABASE_URL  = 'https://vikieodqlvvntnxbtapm.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpa2llb2RxbHZ2bnRueGJ0YXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDk5OTksImV4cCI6MjA5MDI4NTk5OX0.fI-y-0NfMnBryD-ef7YFeW2t9RqvKq3zIRDvJl91ukI';
+const CLOUDINARY_CLOUD = 'dtjvvg1qu';
+const CLOUDINARY_PRESET_COMPLAINTS   = 'gramdrishti_complaints';
+const CLOUDINARY_PRESET_VERIFICATION = 'gramdrishti_verification';
 
-// Session Management
-const SESSION_KEY = 'gram_sabha_session';
+// ── Init Supabase client ───────────────────────────────
+// Add to every HTML page before auth.js:
+// <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+const _supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── Session ────────────────────────────────────────────
+const SESSION_KEY = 'gram_drishti_session';
 
 function saveSession(user) {
-    const session = {
-        ...user,
-        loginTime: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-    };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+        ...user, loginTime: new Date().toISOString()
+    }));
 }
-
-function getSession() {
-    const sessionData = localStorage.getItem(SESSION_KEY);
-    if (!sessionData) return null;
-    const session = JSON.parse(sessionData);
-    if (new Date(session.expiresAt) < new Date()) {
-        clearSession();
-        return null;
-    }
-    return session;
-}
-
-function clearSession() {
-    localStorage.removeItem(SESSION_KEY);
-}
-
-function isLoggedIn() {
-    return getSession() !== null;
-}
-
-function getCurrentUser() {
-    return getSession();
-}
+function getSession()   { const d = localStorage.getItem(SESSION_KEY); return d ? JSON.parse(d) : null; }
+function clearSession() { localStorage.removeItem(SESSION_KEY); }
+function isLoggedIn()   { return getSession() !== null; }
+function getCurrentUser() { return getSession(); }
 
 function requireAuth(allowedRoles = null) {
     const user = getCurrentUser();
-    if (!user) {
-        window.location.href = 'login.html';
-        return null;
-    }
+    if (!user) { window.location.href = 'login.html'; return null; }
     if (allowedRoles && !allowedRoles.includes(user.role)) {
-        window.location.href = user.redirectUrl || user.redirecturl || (user.role === 'admin' ? 'admin-panel.html' : user.role === 'sarpanch' ? 'sarpanch-portal.html' : 'villager-dashboard.html') || 'index.html';
+        const map = { villager: 'villager-dashboard.html', sarpanch: 'sarpanch-portal.html', admin: 'admin-panel.html' };
+        window.location.href = map[user.role] || 'index.html';
         return null;
     }
     return user;
 }
 
 function logout() {
+    _supa.auth.signOut();
     clearSession();
     window.location.href = 'index.html';
 }
 
-// ---------- API helpers ----------
-async function apiGet(path) {
-    const res = await fetch(API_BASE + path, { credentials: 'omit' });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || res.statusText);
-    return data;
+// ── Auth: Login (mobile + PIN) ─────────────────────────
+async function loginUser(mobileRaw, pin) {
+    const mobile = mobileRaw.replace(/[^0-9]/g, '');
+    const email = mobile + '@gramdrishti.in';
+    const { data, error } = await _supa.auth.signInWithPassword({ email, password: pin });
+    if (error) throw new Error('Invalid credentials');
+
+    // Fetch user profile from public.users
+    const { data: userRow, error: uErr } = await _supa
+        .from('users')
+        .select('*, villages(name)')
+        .eq('auth_id', data.user.id)
+        .single();
+    if (uErr || !userRow) throw new Error('User profile not found');
+
+    const profile = {
+        ...userRow,
+        village_id: userRow.village_id || 1, // Fallback safety
+        villageName: userRow.villages?.name || 'Rampur', // Fallback
+        redirectUrl: { villager: 'villager-dashboard.html', sarpanch: 'sarpanch-portal.html', admin: 'admin-panel.html' }[userRow.role] || 'index.html'
+    };
+    saveSession(profile);
+    return profile;
 }
 
-async function apiPost(path, body) {
-    const res = await fetch(API_BASE + path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body || {}),
-        credentials: 'omit'
+// ── Auth: Register ─────────────────────────────────────
+async function registerUser({ name, mobile: mobileRaw, pin, role, villageId, ward }) {
+    const mobile = mobileRaw.replace(/[^0-9]/g, '');
+    const email = mobile + '@gramdrishti.in';
+    const { data, error } = await _supa.auth.signUp({ email, password: pin });
+    if (error) throw new Error(error.message);
+
+    const externalId = (role.slice(0,3).toUpperCase()) + '-' + Math.random().toString(36).slice(2,8).toUpperCase();
+    const avatar = name.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+    const redirectUrl = role === 'villager' ? 'villager-dashboard.html' : role === 'sarpanch' ? 'sarpanch-portal.html' : 'admin-panel.html';
+
+    const { error: insErr } = await _supa.from('users').insert({
+        auth_id: data.user.id,
+        external_id: externalId,
+        name, mobile,
+        role, role_name: role.charAt(0).toUpperCase() + role.slice(1),
+        village_id: villageId ? parseInt(villageId) : null,
+        ward: ward || null,
+        avatar, redirect_url: redirectUrl
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || res.statusText);
-    return data;
+    if (insErr) throw new Error(insErr.message);
+    return { success: true };
 }
 
+// ── Villages ───────────────────────────────────────────
 async function getVillage(villageId) {
     if (!villageId) return null;
-    const r = await apiGet('/api/villages/' + villageId);
-    return r.data || null;
+    const { data } = await _supa.from('villages').select('*').eq('id', villageId).single();
+    return data;
 }
 
+async function listVillages() {
+    const { data } = await _supa.from('villages').select('*').order('name').limit(100);
+    return data || [];
+}
+
+// ── Issues / Complaints ────────────────────────────────
 async function getIssues(villageId, userId) {
-    let path = '/api/issues?';
-    if (villageId) path += 'village_id=' + encodeURIComponent(villageId);
-    if (userId) path += (villageId ? '&' : '') + 'user_id=' + encodeURIComponent(userId);
-    const r = await apiGet(path);
-    return r.data || [];
+    let q = _supa.from('issues').select(`
+        *, projects(verification_images, progress)
+    `).order('created_at', { ascending: false }).limit(50);
+
+    if (villageId) q = q.eq('village_id', villageId);
+
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+
+    // Attach userVoted flag and normalize DB columns to UI expectations
+    let finalData = data || [];
+    if (finalData.length > 0) {
+        let votedSet = new Set();
+        if (userId) {
+            const ids = finalData.map(i => i.id);
+            const { data: votes } = await _supa.from('issue_votes')
+                .select('issue_id').eq('user_id', userId).in('issue_id', ids);
+            votedSet = new Set((votes || []).map(v => v.issue_id));
+        }
+        
+        finalData = finalData.map(i => {
+            // Safely parse attachments if it comes back as stringified JSON
+            let atts = i.attachments || [];
+            if (typeof atts === 'string') {
+                try { atts = JSON.parse(atts); } catch(e) { atts = []; }
+            }
+            
+            return {
+                ...i,
+                userVoted: votedSet.has(i.id),
+                categoryName: i.category_name || i.category,
+                reportedByName: i.reported_by_name,
+                reportedBy: i.reported_by_id,
+                reportedDate: i.reported_date || i.created_at,
+                createdAt: i.created_at,
+                statusName: i.status_name || i.status,
+                attachments: Array.isArray(atts) ? atts : [],
+                verificationImages: i.projects && i.projects[0] ? i.projects[0].verification_images : [],
+                progress: i.projects && i.projects[0] ? i.projects[0].progress : 0
+            };
+        });
+    }
+
+    return finalData;
 }
 
-async function getBudget(villageId) {
-    const path = villageId ? '/api/budget?village_id=' + encodeURIComponent(villageId) : '/api/budget';
-    const r = await apiGet(path);
-    return r.data || { totalReceived: 0, totalSpent: 0, pendingApproval: 0, available: 0, fiscalYear: '', projects: [] };
-}
+async function createIssue({ title, description, category, villageId, reportedById, location, priority, department, attachments }) {
+    const user = await _supa.from('users').select('name, village_id').eq('id', reportedById).single();
+    const catNames = { water:'Water Supply', roads:'Roads & Paths', electricity:'Electricity', sanitation:'Hygiene & Sanitation', education:'Education' };
 
-async function getActivities(villageId) {
-    const path = villageId ? '/api/activities?village_id=' + encodeURIComponent(villageId) : '/api/activities';
-    const r = await apiGet(path);
-    return r.data || [];
+    const safeVillageId = parseInt(villageId) || user.data?.village_id || 1;
+
+    const { data, error } = await _supa.from('issues').insert({
+        title, description, category,
+        category_name: catNames[category] || category,
+        village_id: safeVillageId,
+        reported_by_id: parseInt(reportedById),
+        reported_by_name: user.data?.name,
+        priority: priority || 'normal',
+        department: department || null,
+        location: location || null,
+        attachments: attachments || [],
+        status: 'submitted', status_name: 'Submitted'
+    }).select().single();
+    if (error) throw new Error(error.message);
+    return data;
 }
 
 async function voteIssue(issueId, userId) {
-    const r = await apiPost('/api/issues/' + encodeURIComponent(issueId) + '/vote', { user_id: userId });
-    return r;
+    // Check if already voted
+    const { data: existing } = await _supa.from('issue_votes')
+        .select('id').eq('issue_id', issueId).eq('user_id', userId).single();
+
+    if (existing) {
+        await _supa.from('issue_votes').delete().eq('issue_id', issueId).eq('user_id', userId);
+        const { data: issue } = await _supa.from('issues').select('votes').eq('id', issueId).single();
+        await _supa.from('issues').update({ votes: Math.max(0, (issue?.votes || 0) - 1) }).eq('id', issueId);
+        return { success: true, voted: false };
+    } else {
+        await _supa.from('issue_votes').insert({ issue_id: issueId, user_id: userId });
+        const { data: issue } = await _supa.from('issues').select('votes').eq('id', issueId).single();
+        await _supa.from('issues').update({ votes: (issue?.votes || 0) + 1 }).eq('id', issueId);
+        return { success: true, voted: true };
+    }
 }
 
-async function createProject(projectData) {
-    const r = await apiPost('/api/projects', projectData);
-    return r;
+async function deleteIssue(issueId, userId) {
+    const { data: issue } = await _supa.from('issues').select('id, reported_by_id').eq('id', issueId).single();
+    if (!issue) throw new Error('Issue not found');
+    if (issue.reported_by_id !== userId) throw new Error('You can only delete your own issues');
+    await _supa.from('issue_votes').delete().eq('issue_id', issueId);
+    await _supa.from('issues').delete().eq('id', issueId);
+    return { success: true };
+}
+
+// ── Budget & Projects ──────────────────────────────────
+async function getBudget(villageId) {
+    const { data: summary } = await _supa.from('budget_summary').select('*').eq('village_id', villageId).single();
+    const { data: projects } = await _supa.from('projects').select('*').eq('village_id', villageId).order('id');
+
+    const realSpent   = (projects || []).reduce((s, p) => s + (p.spent || 0), 0);
+    const realPending = (projects || []).filter(p => !['completed','closed','resolved'].includes(p.status))
+        .reduce((s, p) => s + Math.max(0, (p.sanctioned || 0) - (p.spent || 0)), 0);
+    const totalReceived = summary?.total_received || 0;
+
+    return {
+        totalReceived,
+        totalSpent:    realSpent,
+        pendingApproval: realPending,
+        available:     totalReceived - realSpent - realPending,
+        fiscalYear:    summary?.fiscal_year || '',
+        projects:      projects || []
+    };
+}
+
+async function createProject({ name, category, sanctioned, villageId }) {
+    const { data, error } = await _supa.from('projects').insert({
+        name, category, sanctioned: parseFloat(sanctioned),
+        village_id: parseInt(villageId),
+        status: 'in_progress', progress: 0, released: 0, spent: 0
+    }).select().single();
+    if (error) throw new Error(error.message);
+    return data;
 }
 
 async function assignProject(projectId, contractorName) {
-    const r = await apiPost('/api/projects/' + encodeURIComponent(projectId) + '/assign', { contractor_name: contractorName });
-    return r;
+    const { data, error } = await _supa.from('projects')
+        .update({ contractor: contractorName, status: 'in_progress' })
+        .eq('id', projectId).select().single();
+    if (error) throw new Error(error.message);
+    return data;
 }
 
-async function verifyProjectStep(projectId, step, photoUrl) {
-    const payload = { step: step };
-    if (photoUrl) payload.photo_url = photoUrl;
-    const r = await apiPost('/api/projects/' + encodeURIComponent(projectId) + '/verify_step', payload);
-    return r;
+// Convert an issue to a project and assign it to a contractor
+async function assignIssueToContractor(issueId, contractorName, sanctionedAmount) {
+    const { data: issueRow, error: issueErr } = await _supa.from('issues').select('*').eq('id', issueId).single();
+    if (issueErr || !issueRow) throw new Error('Issue not found');
+    
+    // Create new project
+    const { data: newProj, error: projErr } = await _supa.from('projects').insert({
+        name: issueRow.title,
+        category: issueRow.category,
+        village_id: issueRow.village_id,
+        contractor: contractorName,
+        sanctioned: sanctionedAmount || 0,
+        status: 'in_progress',
+        progress: 0, released: 0, spent: 0
+    }).select().single();
+    
+    if (projErr) throw new Error(projErr.message);
+    
+    // Mark issue as in-progress and link project
+    const { error: updErr } = await _supa.from('issues').update({ status: 'in_progress' }).eq('id', issueId);
+    if (updErr) console.warn('Failed to update issue status', updErr);
+    
+    return newProj;
 }
 
-// ---------- Admin API helpers ----------
+async function verifyProjectStep(projectId, step, cloudinaryUrl) {
+    const validSteps = [
+        'verifications_site_inspection','verifications_photos',
+        'verifications_materials','verifications_gps',
+        'verifications_community','verifications_audit'
+    ];
+    if (!validSteps.includes(step)) throw new Error('Invalid step: ' + step);
+
+    // Fetch current project
+    const { data: proj } = await _supa.from('projects').select('*').eq('id', projectId).single();
+    if (!proj) throw new Error('Project not found');
+
+    const images = Array.isArray(proj.verification_images) ? proj.verification_images : [];
+    if (cloudinaryUrl && !images.includes(cloudinaryUrl)) images.push(cloudinaryUrl);
+
+    const update = { [step]: true, verification_images: images };
+
+    // Recalculate progress
+    const allSteps = validSteps.map(s => s === step ? true : proj[s]);
+    const done = allSteps.filter(Boolean).length;
+    update.progress = Math.round((done / 6) * 100);
+    if (done === 6) { update.status = 'completed'; update.completed_date = new Date().toISOString().split('T')[0]; }
+
+    const { data, error } = await _supa.from('projects').update(update).eq('id', projectId).select().single();
+    if (error) throw new Error(error.message);
+    return { success: true, data };
+}
+
+// ── Cloudinary Upload ──────────────────────────────────
+async function uploadToCloudinary(file, preset) {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', preset);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`, {
+        method: 'POST', body: fd
+    });
+    const json = await res.json();
+    if (!json.secure_url) throw new Error('Cloudinary upload failed: ' + (json.error?.message || 'unknown'));
+    return json.secure_url;  // Returns the permanent HTTPS URL
+}
+
+// Upload complaint media (photo/video)
+async function uploadComplaintMedia(file)    { return uploadToCloudinary(file, CLOUDINARY_PRESET_COMPLAINTS); }
+// Upload verification proof photos
+async function uploadVerificationPhoto(file) { return uploadToCloudinary(file, CLOUDINARY_PRESET_VERIFICATION); }
+
+// ── Activities ─────────────────────────────────────────
+async function getActivities(villageId) {
+    let q = _supa.from('activities').select('*').order('created_at', { ascending: false }).limit(20);
+    if (villageId) q = q.eq('village_id', villageId);
+    const { data } = await q;
+    return data || [];
+}
+
+// ── Admin ──────────────────────────────────────────────
 async function getAdminStats() {
-    const r = await apiGet('/api/admin/stats');
-    return r.data || { activeVillages: 0, registeredUsers: 0, issuesResolved: 0, totalFundsTracked: 0 };
+    const [{ count: vil }, { count: usr }, { count: res }, { data: funds }] = await Promise.all([
+        _supa.from('villages').select('*', { count: 'exact', head: true }),
+        _supa.from('users').select('*', { count: 'exact', head: true }),
+        _supa.from('issues').select('*', { count: 'exact', head: true }).eq('status', 'resolved'),
+        _supa.from('projects').select('sanctioned')
+    ]);
+    return {
+        activeVillages: vil || 0, registeredUsers: usr || 0,
+        issuesResolved: res || 0,
+        totalFundsTracked: (funds || []).reduce((s, p) => s + (p.sanctioned || 0), 0)
+    };
 }
 
 async function getAdminUsers() {
-    const r = await apiGet('/api/admin/users');
-    return r.data || [];
+    const { data } = await _supa.from('users').select('*, villages(name)').order('id', { ascending: false });
+    return (data || []).map(u => ({ ...u, villageName: u.villages?.name }));
 }
 
-async function getAdminAlerts() {
-    const r = await apiGet('/api/admin/alerts');
-    return r.data || [];
-}
-
-// Role detection for login page (optional: call API to show role before submit)
-async function checkMobileRole(mobile) {
-    if (!mobile || mobile.length < 10) return null;
-    try {
-        const r = await apiGet('/api/auth/check-mobile?mobile=' + encodeURIComponent(mobile));
-        return r.found ? r : null;
-    } catch {
-        return null;
-    }
-}
-
-// Login Handler (calls backend)
-async function handleLogin(event) {
-    event.preventDefault();
-    const userId = document.getElementById('userId').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const submitBtn = document.getElementById('submitBtn');
-    const userIdError = document.getElementById('userIdError');
-    const passwordError = document.getElementById('passwordError');
-
-    userIdError.classList.remove('show');
-    passwordError.classList.remove('show');
-    document.getElementById('userId').classList.remove('error');
-    document.getElementById('password').classList.remove('error');
-
-    if (userId.length < 10) {
-        document.getElementById('userId').classList.add('error');
-        userIdError.textContent = 'Please enter a valid mobile or Aadhaar number (10+ digits).';
-        userIdError.classList.add('show');
-        return;
-    }
-
-    submitBtn.classList.add('loading');
-    submitBtn.disabled = true;
-
-    try {
-        const res = await apiPost('/api/auth/login', { mobile: userId, password: password });
-        if (!res.success || !res.user) {
-            document.getElementById('password').classList.add('error');
-            passwordError.textContent = res.error || 'Invalid credentials.';
-            passwordError.classList.add('show');
-            submitBtn.classList.remove('loading');
-            submitBtn.disabled = false;
-            return;
-        }
-        saveSession(res.user);
-        var url = res.user.redirectUrl || res.user.redirecturl || { villager: 'villager-dashboard.html', sarpanch: 'sarpanch-portal.html', admin: 'admin-panel.html' }[res.user.role] || 'villager-dashboard.html';
-        window.location.href = url;
-    } catch (err) {
-        document.getElementById('password').classList.add('error');
-        passwordError.textContent = err.message || 'Login failed. Check backend is running at ' + API_BASE;
-        passwordError.classList.add('show');
-        submitBtn.classList.remove('loading');
-        submitBtn.disabled = false;
-    }
-}
-
-// Role Detection on login page (optional: show role from API when user types mobile)
-function detectRole(mobileInput) {
-    const roleDetection = document.getElementById('roleDetection');
-    const roleIcon = document.getElementById('roleIcon');
-    const roleName = document.getElementById('roleName');
-    const roleDesc = document.getElementById('roleDesc');
-    if (!roleDetection) return;
-    const mobile = (typeof mobileInput === 'string' ? mobileInput : (mobileInput && mobileInput.value)) || '';
-    if (mobile.length < 10) {
-        roleDetection.classList.remove('show');
-        return;
-    }
-    checkMobileRole(mobile).then(function(info) {
-        if (!info || !info.found) {
-            roleDetection.classList.remove('show');
-            return;
-        }
-        const icons = { villager: 'person', sarpanch: 'gavel', admin: 'admin_panel_settings', csc: 'storefront' };
-        const pages = { villager: 'Villager Dashboard', sarpanch: 'Sarpanch Portal', admin: 'Admin Panel', csc: 'CSC Portal' };
-        roleDetection.className = 'role-detection show ' + (info.role || '');
-        if (roleIcon) roleIcon.textContent = icons[info.role] || 'person';
-        if (roleName) roleName.textContent = (info.roleName || info.role) + ' Account Detected';
-        if (roleDesc) roleDesc.textContent = 'You\'ll be redirected to ' + (pages[info.role] || 'your dashboard');
-    });
-}
-
-// Demo Auto-fill (only fills form fields; auth is via API)
-function fillDemo(mobile, pin) {
-    document.getElementById('userId').value = mobile || '';
-    document.getElementById('password').value = pin || '';
-    detectRole(mobile);
-}
-
-// Biometric Login (simulated: login as first villager from API or show message)
-function handleBiometric() {
-    if (typeof showNotification === 'function') {
-        showNotification('Biometric authentication is simulated. Use mobile + PIN to login.', 'info');
-    }
-}
-
-// Password Toggle
-function togglePassword() {
-    const passwordInput = document.getElementById('password');
-    const toggleIcon = document.querySelector('.password-toggle');
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        if (toggleIcon) toggleIcon.textContent = 'visibility_off';
-    } else {
-        passwordInput.type = 'password';
-        if (toggleIcon) toggleIcon.textContent = 'visibility';
-    }
-}
-
-// Notification (fallback if app.js not loaded)
-if (typeof showNotification !== 'function') {
-    function showNotification(message, type) {
-        const n = document.createElement('div');
-        n.style.cssText = 'position:fixed;bottom:2rem;right:2rem;padding:1rem 1.5rem;background:#1e293b;color:white;border-radius:0.75rem;font-weight:600;box-shadow:0 10px 40px rgba(0,0,0,0.2);z-index:9999;';
-        n.textContent = message;
-        document.body.appendChild(n);
-        setTimeout(function() { n.remove(); }, 3000);
-    }
-}
-
+// ── Utilities ──────────────────────────────────────────
 function formatCurrency(amount) {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
 }
-
-function formatDate(dateString) {
-    if (!dateString) return '';
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-IN', options);
+function formatDate(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
 }
-
 function getGreeting() {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    const h = new Date().getHours();
+    return h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
 }
 
-// Export for use in other pages
-window.GramSabha = {
-    API_BASE,
-    apiBase: API_BASE,   // alias so GramSabha.apiBase works everywhere
-    apiGet,
-    apiPost,
-    getVillage,
-    getIssues,
-    getBudget,
-    getActivities,
-    voteIssue,
-    createProject,
-    assignProject,
-    verifyProjectStep,
-    checkMobileRole,
-    saveSession,
-    getSession,
-    clearSession,
-    isLoggedIn,
-    getCurrentUser,
-    requireAuth,
-    logout,
-    detectRole,
-    fillDemo,
-    formatCurrency,
-    formatDate,
-    getGreeting,
-    showNotification
+if (typeof showNotification !== 'function') {
+    function showNotification(msg, type) {
+        const n = document.createElement('div');
+        n.style.cssText = 'position:fixed;bottom:2rem;right:2rem;padding:1rem 1.5rem;background:#1e293b;color:white;border-radius:.75rem;font-weight:600;box-shadow:0 10px 40px rgba(0,0,0,.2);z-index:9999;';
+        n.textContent = msg;
+        document.body.appendChild(n);
+        setTimeout(() => n.remove(), 3000);
+    }
+}
+
+// ── Export (replaces the old GramDrishti object) ───────
+window.GramDrishti = {
+    supabase: _supa,
+    // Auth
+    loginUser, registerUser, logout,
+    saveSession, getSession, clearSession, isLoggedIn, getCurrentUser, requireAuth,
+    // Data
+    getVillage, listVillages, getIssues, createIssue, voteIssue, deleteIssue,
+    getBudget, createProject, assignProject, assignIssueToContractor, verifyProjectStep,
+    getActivities, getAdminStats, getAdminUsers,
+    // Media
+    uploadComplaintMedia, uploadVerificationPhoto, uploadToCloudinary,
+    CLOUDINARY_CLOUD,
+    // Helpers
+    formatCurrency, formatDate, getGreeting, showNotification
 };
-
-document.addEventListener('DOMContentLoaded', function() {
-    const methodBtns = document.querySelectorAll('.login-method-btn');
-    methodBtns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            methodBtns.forEach(function(b) { b.classList.remove('active'); });
-            this.classList.add('active');
-            const method = this.dataset.method;
-            const input = document.getElementById('userId');
-            const icon = document.querySelector('.form-icon');
-            if (method === 'aadhaar') {
-                if (input) input.placeholder = 'Enter 12-digit Aadhaar number';
-                if (input) input.maxLength = 12;
-                if (icon) icon.textContent = 'badge';
-            } else {
-                if (input) input.placeholder = 'Enter mobile or Aadhaar number';
-                if (input) input.maxLength = 12;
-                if (icon) icon.textContent = 'phone_android';
-            }
-        });
-    });
-});
-
-console.log('GRAM-SABHA Auth (API) loaded. Backend: ' + API_BASE);

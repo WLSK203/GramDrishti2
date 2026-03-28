@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GRAM-SABHA | Digital Village Governance Platform</title>
-    <meta name="description" content="GRAM-SABHA: Bridging the Gap Between Villagers and Local Governance. Access village services, track budgets, and report issues.">
+    <title>GRAM-DRISHTI | Digital Village Governance Platform</title>
+    <meta name="description" content="GRAM-DRISHTI: Bridging the Gap Between Villagers and Local Governance. Access village services, track budgets, and report issues.">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
@@ -18,7 +18,7 @@
                     <span class="material-symbols-outlined">account_balance</span>
                 </div>
                 <div class="logo-text">
-                    <h1>GRAM-SABHA</h1>
+                    <h1>GRAM-DRISHTI</h1>
                     <p>Digital Governance</p>
                 </div>
             </div>
@@ -33,7 +33,7 @@
                         <span class="material-symbols-outlined">dashboard</span>
                         <span>My Dashboard</span>
                     </a>
-                    <button class="logout-btn" onclick="GramSabha.logout()">
+                    <button class="logout-btn" onclick="GramDrishti.logout()">
                         <span class="material-symbols-outlined">logout</span>
                     </button>
                 </div>
@@ -218,7 +218,7 @@
                 <div class="footer-brand">
                     <div class="footer-logo">
                         <span class="material-symbols-outlined">account_balance</span>
-                        <h2>GRAM-SABHA</h2>
+                        <h2>GRAM-DRISHTI</h2>
                     </div>
                     <p data-i18n="footer.desc">The official digital platform for rural India, focused on growth and absolute transparency.</p>
                 </div>
@@ -240,7 +240,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>© 2024 GRAM-SABHA Digital Platform. Govt of India Initiative.</p>
+                <p>© 2024 GRAM-DRISHTI Digital Platform. Govt of India Initiative.</p>
                 <div class="footer-badges">
                     <div class="badge">🇮🇳 Digital India</div>
                     <div class="badge">Aadhaar Enabled</div>
@@ -249,13 +249,14 @@
         </div>
     </footer>
 
-    <script src="js/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
     <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
     <script>
         // Check login status and update UI
         document.addEventListener('DOMContentLoaded', async function() {
-            const user = GramSabha.getCurrentUser();
+            const user = GramDrishti.getCurrentUser();
             const userMenu = document.getElementById('userMenu');
             const loginBtn = document.getElementById('loginBtn');
             const dashboardLink = document.getElementById('dashboardLink');
@@ -303,8 +304,7 @@
                 try {
                     var villageId = user.villageId || user.village_id || 1;
                     var fmt = function(n) { return '₹' + (n || 0).toLocaleString('en-IN'); };
-                    var budgetRes = await fetch('http://127.0.0.1:5000/api/budget?village_id=' + villageId).then(function(r) { return r.json(); });
-                    var bud = budgetRes && budgetRes.success && budgetRes.data ? budgetRes.data : {};
+                    var bud = await GramDrishti.getBudget(villageId || 1) || {};
                     var total = bud.totalReceived || 0;
                     var spent = bud.totalSpent || 0;
                     var avail = bud.available || 0;

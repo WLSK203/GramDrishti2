@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   GRAM-SABHA  –  Premium Mobile Responsiveness JS
+   GRAM-DRISHTI  –  Premium Mobile Responsiveness JS
    ══════════════════════════════════════════════════════════════
    Auto-injects: hamburger menu, sidebar overlay with swipe,
    bottom navigation bar, ripple tap effects, and smooth

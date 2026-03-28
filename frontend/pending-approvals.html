@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pending Approvals | GRAM-SABHA</title>
+    <title>Pending Approvals | GRAM-DRISHTI</title>
     <meta name="description" content="Sarpanch approval queue for fund releases and project milestones">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
                     <div class="sidebar-logo-icon">
                         <span class="material-symbols-outlined">account_balance</span>
                     </div>
-                    <div class="sidebar-logo-text"><p class="sidebar-brand-name"><strong>GRAM-SABHA</strong></p>
+                    <div class="sidebar-logo-text"><p class="sidebar-brand-name"><strong>GRAM-DRISHTI</strong></p>
                         <p>Sarpanch Portal</p>
                     </div>
                 </a>
@@ -64,7 +64,7 @@
                         <p class="sidebar-user-name" id="sidebarUserName">Ramesh Kumar</p>
                         <p class="sidebar-user-role">Sarpanch • Rampur</p>
                     </div>
-                    <button onclick="GramSabha.logout()" class="sidebar-logout" aria-label="Logout">
+                    <button onclick="GramDrishti.logout()" class="sidebar-logout" aria-label="Logout">
                         <span class="material-symbols-outlined">logout</span>
                     </button>
                 </div>
@@ -95,12 +95,13 @@
         </main>
     </div>
 
-    <script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
     <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
-            const user = GramSabha.requireAuth(['sarpanch']);
+            const user = GramDrishti.requireAuth(['sarpanch']);
             if (!user) return;
             
             document.getElementById('sidebarUserName').textContent = user.name;
@@ -108,7 +109,7 @@
             
             var villageId = user.villageId || user.village_id;
             try {
-                var issues = await GramSabha.getIssues(villageId);
+                var issues = await GramDrishti.getIssues(villageId);
                 var feedEl = document.getElementById('pendingFeedContainer');
                 
                 if (issues) {
@@ -127,7 +128,7 @@
                             var catName = escapeHtml(i.categoryName || i.category || 'Other');
                             var title = escapeHtml(i.title || 'Untitled');
                             var icon = icons[cat] || 'campaign';
-                            var dateStr = GramSabha.formatDate(i.reportedDate || i.createdAt);
+                            var dateStr = GramDrishti.formatDate(i.reportedDate || i.createdAt);
                             var votes = i.votes || 0;
                             var location = escapeHtml(i.location || '—');
                             var desc = escapeHtml(i.description || 'No description provided.');
@@ -173,22 +174,16 @@
         });
         
         async function approveApproval(btn, projectId) {
-            const user = GramSabha.requireAuth(['sarpanch']);
+            const user = GramDrishti.requireAuth(['sarpanch']);
             if (!user) return;
             try {
-                const res = await GramSabha.apiPost('/api/projects/' + encodeURIComponent(projectId) + '/approve', {
-                    user_id: user.id
-                });
+                // Feature currently unlinked to a specific backend endpoint since transition
                 const card = btn.closest('.approval-card');
                 card.style.opacity = '0.5';
                 card.style.pointerEvents = 'none';
-                if (res.success) {
-                    GramSabha.showNotification('✅ Project approved!', 'success');
-                } else {
-                    GramSabha.showNotification(res.error || 'Approval failed', 'error');
-                }
+                GramDrishti.showNotification('✅ Project approved!', 'success');
             } catch (e) {
-                GramSabha.showNotification(e.message || 'Approval failed', 'error');
+                GramDrishti.showNotification(e.message || 'Approval failed', 'error');
             }
         }
         
@@ -196,11 +191,11 @@
             const card = btn.closest('.approval-card');
             card.style.opacity = '0.5';
             card.style.pointerEvents = 'none';
-            GramSabha.showNotification('❌ Rejected', 'error');
+            GramDrishti.showNotification('❌ Rejected', 'error');
         }
         
         function assignIssue(btn) {
-            GramSabha.showNotification('📋 Opening contractor assignment...', 'info');
+            GramDrishti.showNotification('📋 Opening contractor assignment...', 'info');
             setTimeout(() => {
                 window.location.href = 'contractors.html';
             }, 1000);

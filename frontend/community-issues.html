@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Community Issues | GRAM-SABHA</title>
+    <title>Community Issues | GRAM-DRISHTI</title>
     <meta name="description" content="View and manage all community reported issues">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
                     <div class="sidebar-logo-icon">
                         <span class="material-symbols-outlined">account_balance</span>
                     </div>
-                    <div class="sidebar-logo-text"><p class="sidebar-brand-name"><strong>GRAM-SABHA</strong></p>
+                    <div class="sidebar-logo-text"><p class="sidebar-brand-name"><strong>GRAM-DRISHTI</strong></p>
                         <p>Sarpanch Portal</p>
                     </div>
                 </a>
@@ -64,7 +64,7 @@
                         <p class="sidebar-user-name" id="sidebarUserName">Ramesh Kumar</p>
                         <p class="sidebar-user-role">Sarpanch • Rampur</p>
                     </div>
-                    <button onclick="GramSabha.logout()" class="sidebar-logout" aria-label="Logout">
+                    <button onclick="GramDrishti.logout()" class="sidebar-logout" aria-label="Logout">
                         <span class="material-symbols-outlined">logout</span>
                     </button>
                 </div>
@@ -134,14 +134,15 @@
         </main>
     </div>
 
-    <script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
     <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
     <script>
         var allIssues = [];
 
         document.addEventListener('DOMContentLoaded', async function() {
-            const user = GramSabha.requireAuth(['sarpanch']);
+            const user = GramDrishti.requireAuth(['sarpanch']);
             if (!user) return;
 
             document.getElementById('sidebarUserName').textContent = user.name || '—';
@@ -151,7 +152,7 @@
 
             var villageId = user.villageId || user.village_id;
             try {
-                allIssues = await GramSabha.getIssues(villageId) || [];
+                allIssues = await GramDrishti.getIssues(villageId) || [];
                 renderIssues(allIssues);
             } catch (e) {
                 document.getElementById('issuesTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">Could not load issues. Is the backend running?</td></tr>';
@@ -200,16 +201,15 @@
                 var title = escapeHtml(i.title || '—');
                 var desc = escapeHtml(i.description || '');
                 var location = escapeHtml(i.location || '—');
-                var dateStr = escapeHtml(GramSabha.formatDate(i.reportedDate || i.createdAt));
+                var dateStr = escapeHtml(GramDrishti.formatDate(i.reportedDate || i.createdAt));
                 var issueId = escapeHtml(String(i.id || ''));
                 
                 var proofHtml = '';
                 var proofs = i.verificationImages || [];
                 if (proofs.length > 0 && i.progress >= 100) {
-                    var base = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
                     proofHtml = '<div style="margin-top:0.5rem; display:flex; gap:0.35rem; flex-wrap:wrap;">' +
                         proofs.map(function(url) {
-                            return '<img src="' + base + url + '" style="width:34px;height:34px;object-fit:cover;border-radius:.25rem;cursor:pointer;border:1px solid #86efac" onclick="window.open(\'' + base + url + '\',\'_blank\')" title="Completion Proof">';
+                            return '<img src="' + url + '" style="width:34px;height:34px;object-fit:cover;border-radius:.25rem;cursor:pointer;border:1px solid #86efac" onclick="window.open(\'' + url + '\',\'_blank\')" title="Completion Proof">';
                         }).join('') +
                         '</div>';
                 }
@@ -227,12 +227,12 @@
         }
 
         function assignIssue(issueId) {
-            GramSabha.showNotification('Opening contractor assignment for issue #' + issueId, 'info');
+            GramDrishti.showNotification('Opening contractor assignment for issue #' + issueId, 'info');
             setTimeout(function() { window.location.href = 'contractors.html?issue=' + encodeURIComponent(issueId); }, 500);
         }
 
         function viewIssue(name) {
-            GramSabha.showNotification('Viewing details for: ' + escapeHtml(name), 'info');
+            GramDrishti.showNotification('Viewing details for: ' + escapeHtml(name), 'info');
         }
     </script>
 </body>

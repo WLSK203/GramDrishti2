@@ -1,5 +1,5 @@
 /* =====================================================
-   GRAM-SABHA - JavaScript Application
+   GRAM-DRISHTI - JavaScript Application
    ===================================================== */
 
 // Language Translations

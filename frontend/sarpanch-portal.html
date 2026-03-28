@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sarpanch Portal | GRAM-SABHA</title>
+    <title>Sarpanch Portal | GRAM-DRISHTI</title>
     <meta name="description" content="Administrative portal for village Sarpanch — manage projects, budgets, approvals and community issues">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
             <span class="material-symbols-outlined">account_balance</span>
         </div>
         <div>
-            <p class="sp-logo-name">GRAM-SABHA</p>
+            <p class="sp-logo-name">GRAM-DRISHTI</p>
             <p class="sp-logo-sub">Sarpanch Portal</p>
         </div>
     </a>
@@ -74,7 +74,7 @@
                 <p class="sp-user-name" id="sidebarUserName">Ramesh Kumar</p>
                 <p class="sp-user-role">Sarpanch</p>
             </div>
-            <button class="sp-logout-btn" onclick="GramSabha.logout()" aria-label="Logout">
+            <button class="sp-logout-btn" onclick="GramDrishti.logout()" aria-label="Logout">
                 <span class="material-symbols-outlined" aria-hidden="true">logout</span>
             </button>
         </div>
@@ -358,14 +358,15 @@
 </main>
 </div><!-- /layout -->
 
-<script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
 <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
 <script>
     'use strict';
 
     document.addEventListener('DOMContentLoaded', async function() {
-        var user = GramSabha.requireAuth(['sarpanch']);
+        var user = GramDrishti.requireAuth(['sarpanch']);
         if (!user) return;
 
         // Sidebar & hero
@@ -375,7 +376,7 @@
         document.getElementById('sidebarUserName').textContent = user.name || '—';
 
         var firstName = (user.name || 'Sarpanch').split(' ')[0];
-        document.getElementById('greetingText').textContent = GramSabha.getGreeting() + ', ' + firstName + ' Ji!';
+        document.getElementById('greetingText').textContent = GramDrishti.getGreeting() + ', ' + firstName + ' Ji!';
         document.getElementById('heroName').textContent = 'Namaste, ' + (user.name || 'Sarpanch') + ' Ji 🙏';
         var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('dateText').textContent = new Date().toLocaleDateString('en-IN', options);
@@ -384,25 +385,25 @@
         var villageId = user.villageId || user.village_id;
         if (villageId) {
             try {
-                var village = await GramSabha.getVillage(villageId);
+                var village = await GramDrishti.getVillage(villageId);
                 var vName = village && (village.name || '') ? village.name + ' Village' : '—';
                 document.getElementById('villageBadge').textContent = vName;
             } catch(e) {}
 
             try {
-                var budget = await GramSabha.getBudget(villageId);
+                var budget = await GramDrishti.getBudget(villageId);
                 if (budget) {
                     var total = budget.totalReceived || 0;
                     var spent = budget.totalSpent    || 0;
                     var committed = budget.sanctionedFunds !== undefined ? budget.sanctionedFunds : (budget.pendingApproval || 0);
                     var avail = budget.available     || 0;
                     
-                    document.getElementById('budgetValue').textContent = GramSabha.formatCurrency(total);
+                    document.getElementById('budgetValue').textContent = GramDrishti.formatCurrency(total);
                     
-                    if (document.getElementById('spTotalReceived')) document.getElementById('spTotalReceived').textContent = GramSabha.formatCurrency(total);
-                    if (document.getElementById('spSpent')) document.getElementById('spSpent').textContent = GramSabha.formatCurrency(spent);
-                    if (document.getElementById('spCommitted')) document.getElementById('spCommitted').textContent = GramSabha.formatCurrency(committed);
-                    if (document.getElementById('spAvailable')) document.getElementById('spAvailable').textContent = GramSabha.formatCurrency(avail);
+                    if (document.getElementById('spTotalReceived')) document.getElementById('spTotalReceived').textContent = GramDrishti.formatCurrency(total);
+                    if (document.getElementById('spSpent')) document.getElementById('spSpent').textContent = GramDrishti.formatCurrency(spent);
+                    if (document.getElementById('spCommitted')) document.getElementById('spCommitted').textContent = GramDrishti.formatCurrency(committed);
+                    if (document.getElementById('spAvailable')) document.getElementById('spAvailable').textContent = GramDrishti.formatCurrency(avail);
                     
                     // Update ring
                     var pct = total > 0 ? Math.round((spent / total) * 100) : 0;
@@ -457,7 +458,7 @@
                                     '<div class="sp-breakdown-meta">' +
                                         '<div class="sp-breakdown-labels">' +
                                             '<span class="sp-breakdown-name">' + conf.label + '</span>' +
-                                            '<span class="sp-breakdown-val">' + GramSabha.formatCurrency(val) + '</span>' +
+                                            '<span class="sp-breakdown-val">' + GramDrishti.formatCurrency(val) + '</span>' +
                                         '</div>' +
                                         '<div class="sp-breakdown-bar" style="background:' + conf.bg + '">' +
                                             '<div style="width:' + pctCat + '%;height:100%;border-radius:999px;background:' + conf.dot + '"></div>' +
@@ -485,7 +486,7 @@
                                 projContainer.innerHTML = activeProjects.map(function(p) {
                                     var title = escapeHtml(p.name || p.title || 'Untitled Project');
                                     var cName = escapeHtml(p.contractor || p.contractorName || 'Unassigned Contractor');
-                                    var amt = GramSabha.formatCurrency(p.sanctioned || p.amount || 0);
+                                    var amt = GramDrishti.formatCurrency(p.sanctioned || p.amount || 0);
                                     var prog = Math.round(p.progress || 0);
                                     
                                     var statusLabel = 'In Progress';
@@ -533,7 +534,7 @@
             
             // Live Issues Feed
             try {
-                var issues = await GramSabha.getIssues(villageId);
+                var issues = await GramDrishti.getIssues(villageId);
                 if (issues) {
                     var openIssues = issues.filter(function(i) {
                         var s = (i.status || '').toLowerCase();
@@ -566,20 +567,19 @@
                                 var title = escapeHtml(i.title || 'Untitled Issue');
                                 var desc = escapeHtml(i.description || '');
                                 var icon = icons[cat] || 'campaign';
-                                var dateStr = GramSabha.formatDate(i.reportedDate || i.createdAt);
+                                var dateStr = GramDrishti.formatDate(i.reportedDate || i.createdAt);
                                 var votes = i.votes || 0;
                                 var location = escapeHtml(i.location || '—');
                                 var reporter = escapeHtml(i.reportedByName || 'Villager');
 
                                 // Attachments
-                                var apiBase = GramSabha.apiBase || GramSabha.API_BASE || 'http://127.0.0.1:5000';
                                 var atts = i.attachments || [];
                                 var attHtml = atts.length > 0
                                     ? '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0">' +
                                         atts.map(function(url) {
                                             var isVideo = /\.(mp4|webm|mov)$/i.test(url);
-                                            if (isVideo) return '<div style="width:50px;height:50px;border-radius:.4rem;background:#f1f5f9;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="window.open(\'' + apiBase + url + '\',\'_blank\')"><span class="material-symbols-outlined" style="font-size:1.25rem;color:#64748b">videocam</span></div>';
-                                            return '<img src="' + apiBase + url + '" style="width:50px;height:50px;object-fit:cover;border-radius:.4rem;cursor:pointer;border:1px solid #e2e8f0" onclick="window.open(\'' + apiBase + url + '\',\'_blank\')" alt="attachment">';
+                                            if (isVideo) return '<div style="width:50px;height:50px;border-radius:.4rem;background:#f1f5f9;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="window.open(\'' + url + '\',\'_blank\')"><span class="material-symbols-outlined" style="font-size:1.25rem;color:#64748b">videocam</span></div>';
+                                            return '<img src="' + url + '" style="width:50px;height:50px;object-fit:cover;border-radius:.4rem;cursor:pointer;border:1px solid #e2e8f0" onclick="window.open(\'' + url + '\',\'_blank\')" alt="attachment">';
                                         }).join('') + '</div>'
                                     : '';
                                 
@@ -633,7 +633,7 @@
                 card.style.padding = '0';
             }, 150);
         }, 100);
-        GramSabha.showNotification('✅ ' + msg, 'success');
+        GramDrishti.showNotification('✅ ' + msg, 'success');
     }
 
     function handleReject(btn, msg) {
@@ -641,7 +641,7 @@
         card.style.transition = 'opacity .35s';
         card.style.opacity = '0.35';
         card.style.pointerEvents = 'none';
-        GramSabha.showNotification('❌ ' + msg, 'error');
+        GramDrishti.showNotification('❌ ' + msg, 'error');
     }
 </script>
 </body>

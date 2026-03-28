@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Active Projects | GRAM-SABHA</title>
+    <title>Active Projects | GRAM-DRISHTI</title>
     <meta name="description" content="Track all ongoing village development projects">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
                     <div class="sidebar-logo-icon">
                         <span class="material-symbols-outlined">account_balance</span>
                     </div>
-                    <div class="sidebar-logo-text"><p class="sidebar-brand-name"><strong>GRAM-SABHA</strong></p>
+                    <div class="sidebar-logo-text"><p class="sidebar-brand-name"><strong>GRAM-DRISHTI</strong></p>
                         <p>Sarpanch Portal</p>
                     </div>
                 </a>
@@ -64,7 +64,7 @@
                         <p class="sidebar-user-name" id="sidebarUserName">Ramesh Kumar</p>
                         <p class="sidebar-user-role">Sarpanch • Rampur</p>
                     </div>
-                    <button onclick="GramSabha.logout()" class="sidebar-logout" aria-label="Logout">
+                    <button onclick="GramDrishti.logout()" class="sidebar-logout" aria-label="Logout">
                         <span class="material-symbols-outlined">logout</span>
                     </button>
                 </div>
@@ -198,12 +198,13 @@
         </div>
     </div>
 
-    <script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
     <script src="js/app.js"></script>
     <script src="js/mobile.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
-            var user = GramSabha.requireAuth(['sarpanch']);
+            var user = GramDrishti.requireAuth(['sarpanch']);
             if (!user) return;
             document.getElementById('sidebarUserName').textContent = user.name || '—';
             document.getElementById('sidebarAvatar').textContent = user.avatar || (user.name || '').split(' ').map(function(n) { return n[0]; }).join('').slice(0, 2).toUpperCase() || '—';
@@ -215,9 +216,9 @@
             // Define loader function
             window.loadProjects = async function() {
                 try {
-                    var budget = await GramSabha.getBudget(villageId);
+                    var budget = await GramDrishti.getBudget(villageId);
                     if (budget) {
-                        var totalBudgetStr = GramSabha.formatCurrency(budget.totalReceived || 0);
+                        var totalBudgetStr = GramDrishti.formatCurrency(budget.totalReceived || 0);
                         document.getElementById('statTotalBudget').textContent = totalBudgetStr;
                         
                         if (budget.projects) {
@@ -242,7 +243,7 @@
                                     var title = escapeHtml(p.name || p.title || 'Untitled Project');
                                     var desc = escapeHtml(p.description || p.externalId || p.external_id || '');
                                     var cName = escapeHtml(p.contractor || p.contractorName || 'To be assigned');
-                                    var amt = GramSabha.formatCurrency(p.sanctioned || p.amount || 0);
+                                    var amt = GramDrishti.formatCurrency(p.sanctioned || p.amount || 0);
                                     var prog = Math.round(p.progress || 0);
                                     var cat = (p.category || 'other').toLowerCase();
                                     var catNames = {'water':'Water Supply', 'roads':'Roads & Paths', 'electricity':'Electricity', 'sanitation':'Sanitation', 'education':'Education'};
@@ -332,18 +333,18 @@
                 btn.textContent = 'Creating...';
                 
                 try {
-                    await GramSabha.createProject({
+                    await GramDrishti.createProject({
                         name: document.getElementById('projName').value,
                         category: document.getElementById('projCategory').value,
                         sanctioned: document.getElementById('projAmount').value,
                         village_id: villageId
                     });
                     
-                    GramSabha.showNotification('Project successfully verified and created!', 'success');
+                    GramDrishti.showNotification('Project successfully verified and created!', 'success');
                     closeNewProjectModal();
                     await loadProjects();
                 } catch(err) {
-                    GramSabha.showNotification(err.message || 'Error saving project', 'error');
+                    GramDrishti.showNotification(err.message || 'Error saving project', 'error');
                 } finally {
                     btn.disabled = false;
                     btn.textContent = 'Create Project';

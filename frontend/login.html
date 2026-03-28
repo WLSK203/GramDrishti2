@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | GRAM-SABHA</title>
-    <meta name="description" content="Secure login to GRAM-SABHA Digital Village Governance Platform">
+    <title>Login | GRAM-DRISHTI</title>
+    <meta name="description" content="Secure login to GRAM-DRISHTI Digital Village Governance Platform">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
@@ -609,7 +609,7 @@
                     <span class="material-symbols-outlined">account_balance</span>
                 </div>
                 <div class="brand-logo-text">
-                    <h1>GRAM-SABHA</h1>
+                    <h1>GRAM-DRISHTI</h1>
                     <p>Digital Village Governance</p>
                 </div>
             </div>
@@ -737,6 +737,77 @@
         </main>
     </div>
 
-    <script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Check if already logged in
+        if (typeof GramDrishti !== 'undefined' && GramDrishti.isLoggedIn()) {
+            const user = GramDrishti.getCurrentUser();
+            window.location.href = user.redirectUrl || 'index.html';
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const mobile   = document.getElementById('userId').value.trim();
+            const pin      = document.getElementById('password').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+            const errorElement = document.getElementById('passwordError');
+            
+            // Basic validation
+            if (!mobile || !pin) {
+                errorElement.textContent = 'Please enter both mobile/Aadhaar and OTP/PIN';
+                errorElement.classList.add('show');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.classList.add('loading');
+            errorElement.classList.remove('show');
+
+            try {
+                const profile = await GramDrishti.loginUser(mobile, pin);
+                window.location.href = profile.redirectUrl || 'villager-dashboard.html';
+            } catch (err) {
+                errorElement.textContent = err.message || 'Login failed. Please check your credentials.';
+                errorElement.classList.add('show');
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('loading');
+            }
+        }
+
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const icon = document.querySelector('.password-toggle');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.textContent = 'visibility_off';
+            } else {
+                passwordInput.type = 'password';
+                icon.textContent = 'visibility';
+            }
+        }
+
+        function detectRole(value) {
+            // Simplified logic: Since we do not know the role until login,
+            // we will just hide the dynamic role detection UI or show a generic prompt.
+            const roleDetection = document.getElementById('roleDetection');
+            const roleName = document.getElementById('roleName');
+            const roleDesc = document.getElementById('roleDesc');
+            const roleIcon = document.getElementById('roleIcon');
+
+            if (value.length >= 10) {
+                roleDetection.className = 'role-detection show villager';
+                roleName.textContent = 'System Account';
+                roleDesc.textContent = 'Role securely verified at login';
+                roleIcon.textContent = 'admin_panel_settings';
+            } else {
+                roleDetection.className = 'role-detection'; // Hide
+            }
+        }
+
+        function handleBiometric() {
+            GramDrishti.showNotification('Biometric login is currently disabled for this test environment.', 'info');
+        }
+    </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Report an Issue | GRAM-SABHA</title>
+    <title>Report an Issue | GRAM-DRISHTI</title>
     <meta name="description" content="Report community issues to your local village authorities">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -516,7 +516,7 @@
                     <span class="material-symbols-outlined">account_balance</span>
                 </div>
                 <div class="issue-logo-text">
-                    <h1>GRAM-SABHA</h1>
+                    <h1>GRAM-DRISHTI</h1>
                     <p>Community Portal</p>
                 </div>
             </a>
@@ -661,7 +661,8 @@
         </main>
     </div>
 
-    <script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
     <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
     <script>
@@ -721,21 +722,13 @@
             renderPreviews();
         };
 
-        // === Upload helper ===
+        // === Upload helper (Cloudinary Direct) ===
         async function uploadFiles() {
             var uploadedPaths = [];
             for (var i = 0; i < selectedFiles.length; i++) {
-                var formData = new FormData();
-                formData.append('file', selectedFiles[i]);
                 try {
-                    var res = await fetch(GramSabha.apiBase + '/api/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    var data = await res.json();
-                    if (data.success) {
-                        uploadedPaths.push(data.path);
-                    }
+                    var url = await GramDrishti.uploadComplaintMedia(selectedFiles[i]);
+                    uploadedPaths.push(url);
                 } catch(err) {
                     console.error('Upload failed for:', selectedFiles[i].name, err);
                 }
@@ -745,7 +738,7 @@
 
         // Submit issue to backend
         document.getElementById('submitIssueBtn').addEventListener('click', async function () {
-            const user = GramSabha.requireAuth(['villager']);
+            const user = GramDrishti.requireAuth(['villager']);
             if (!user) return;
 
             const selected = document.querySelector('.category-option.selected span:last-child');
@@ -779,7 +772,7 @@
                     attachments = await uploadFiles();
                 }
 
-                const res = await GramSabha.apiPost('/api/issues', {
+                await GramDrishti.createIssue({
                     title,
                     description: desc,
                     category,
@@ -790,14 +783,11 @@
                     anonymous: anonActive,
                     attachments: attachments
                 });
-                if (res.success) {
-                    GramSabha.showNotification('\u2705 Issue submitted successfully!' + (attachments.length ? ' (' + attachments.length + ' file(s) attached)' : ''), 'success');
-                    setTimeout(() => { window.location.href = 'villager-dashboard.html'; }, 1000);
-                } else {
-                    GramSabha.showNotification(res.error || 'Issue submission failed', 'error');
-                }
-            } catch (e) {
-                GramSabha.showNotification(e.message || 'Issue submission failed. Check backend.', 'error');
+                
+                GramDrishti.showNotification('\u2705 Issue submitted successfully!' + (attachments.length ? ' (' + attachments.length + ' file(s) attached)' : ''), 'success');
+                setTimeout(() => { window.location.href = 'villager-dashboard.html'; }, 1000);
+            } catch (err) {
+                GramDrishti.showNotification(err.message || 'Issue submission failed', 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span class="material-symbols-outlined">send</span> Submit Issue Report';

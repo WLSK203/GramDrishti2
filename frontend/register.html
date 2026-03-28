@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Account | GRAM-SABHA</title>
+    <title>Create Account | GRAM-DRISHTI</title>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
@@ -46,7 +46,7 @@
         <aside class="login-branding">
             <div class="brand-logo">
                 <div class="brand-logo-icon"><span class="material-symbols-outlined">account_balance</span></div>
-                <div class="brand-logo-text"><h1>GRAM-SABHA</h1><p>Digital Village Governance</p></div>
+                <div class="brand-logo-text"><h1>GRAM-DRISHTI</h1><p>Digital Village Governance</p></div>
             </div>
             <div class="brand-content">
                 <p>Create your account to report issues, vote on village matters, and access your dashboard.</p>
@@ -96,13 +96,15 @@
                         <label class="form-label">Ward (optional)</label>
                         <input type="text" class="form-input" id="ward" placeholder="e.g. Ward 1">
                     </div>
+                    <p class="form-error" id="formError" style="text-align:center; margin-bottom:1rem;"></p>
                     <button type="submit" class="submit-btn" id="submitBtn">Create Account</button>
                 </form>
                 <p class="login-prompt">Already have an account? <a href="login.html">Log in</a></p>
             </div>
         </main>
     </div>
-    <script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
     <script>
         var API_BASE = (function() {
             var s = document.querySelector('script[data-api-base]');
@@ -129,40 +131,38 @@
             btn.disabled = true;
             btn.textContent = 'Creating…';
             try {
-                var res = await fetch(API_BASE + '/api/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name, mobile: mobile, pin: pin, role: role, villageId: villageId || null, ward: ward })
-                });
-                var data = await res.json().catch(function() { return {}; });
-                if (data.success) {
-                    document.getElementById('msgSuccess').classList.add('show');
-                    document.getElementById('registerForm').reset();
-                } else {
-                    document.getElementById('mobileError').textContent = data.error || 'Registration failed';
-                    document.getElementById('mobileError').classList.add('show');
-                }
+                await GramDrishti.registerUser({ name: name, mobile: mobile, pin: pin, role: role, villageId: villageId || null, ward: ward });
+                document.getElementById('msgSuccess').classList.add('show');
+                document.getElementById('registerForm').reset();
             } catch (err) {
-                document.getElementById('mobileError').textContent = 'Could not reach server. Is the backend running at ' + API_BASE + '?';
-                document.getElementById('mobileError').classList.add('show');
+                document.getElementById('formError').textContent = err.message || 'Registration failed. Please try again.';
+                document.getElementById('formError').classList.add('show');
             }
             btn.disabled = false;
             btn.textContent = 'Create Account';
         };
 
-        // Load villages
         (async function() {
             var sel = document.getElementById('village');
             try {
-                var r = await fetch(API_BASE + '/api/villages');
-                var data = await r.json();
-                var list = (data && data.data) ? data.data : [];
-                sel.innerHTML = '<option value="">Select village (optional)</option>' + list.map(function(v) { return '<option value="' + v.id + '">' + (v.name || v.id) + '</option>'; }).join('');
-                if (!list.length) sel.innerHTML = '<option value="">No villages yet. Add one in Neon (see backend/seed_once.sql).</option>';
+                var list = await GramDrishti.listVillages() || [];
+                sel.innerHTML = '<option value="">Select village (optional)</option>' + list.map(function(v) { return '<option value="' + v.id + '">' + escapeHtml(v.name || v.id) + '</option>'; }).join('');
+                if (!list.length) sel.innerHTML = '<option value="">No villages found in Supabase.</option>';
             } catch (e) {
                 sel.innerHTML = '<option value="">Could not load villages</option>';
             }
         })();
+        
+        // Escape HTML for safety
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
     </script>
 </body>
 </html>

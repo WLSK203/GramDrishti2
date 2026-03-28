@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Work Verification Checklist | GRAM-SABHA</title>
+    <title>Work Verification Checklist | GRAM-DRISHTI</title>
     <meta name="description" content="Contractor work verification and validation portal">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -466,7 +466,7 @@
                 <span class="material-symbols-outlined">account_balance</span>
             </div>
             <div>
-                <h1>GRAM-SABHA</h1>
+                <h1>GRAM-DRISHTI</h1>
                 <p>Gov Digital Infrastructure</p>
             </div>
         </a>
@@ -567,7 +567,7 @@
     <footer class="verify-footer">
         <div class="footer-brand">
             <span class="material-symbols-outlined">account_balance</span>
-            <strong>GRAM-SABHA</strong>
+            <strong>GRAM-DRISHTI</strong>
         </div>
         <p class="footer-text">© <span class="copyright-year">2024</span> Digital Governance Division • Ministry of Rural Development</p>
         <div class="footer-links">
@@ -576,7 +576,8 @@
         </div>
     </footer>
 
-<script src="js/auth.js" data-api-base="http://127.0.0.1:5000"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
 <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
 <script>
@@ -591,7 +592,7 @@
     ];
 
     document.addEventListener('DOMContentLoaded', async function() {
-        var user = GramSabha.requireAuth(['sarpanch']);
+        var user = GramDrishti.requireAuth(['sarpanch']);
         if (!user) return;
 
         document.querySelectorAll('.copyright-year').forEach(function(el) {
@@ -600,7 +601,7 @@
 
         // Load Budget Projects
         try {
-            var budget = await GramSabha.getBudget(user.villageId || user.village_id || 1);
+            var budget = await GramDrishti.getBudget(user.villageId || user.village_id || 1);
             if (budget && budget.projects) {
                 // Only show projects that have a contractor
                 allProjects = budget.projects.filter(p => p.contractor && p.contractor.length > 0 && p.status !== 'completed');
@@ -651,7 +652,7 @@
         try {
             document.getElementById('infoContractor').textContent = p.contractor || '—';
             document.getElementById('infoCategory').textContent = p.category || 'Infrastructure';
-            document.getElementById('infoAmount').textContent = GramSabha.formatCurrency ? GramSabha.formatCurrency(p.sanctioned) : '₹' + p.sanctioned;
+            document.getElementById('infoAmount').textContent = GramDrishti.formatCurrency ? GramDrishti.formatCurrency(p.sanctioned) : '₹' + p.sanctioned;
             document.getElementById('infoDate').textContent = p.start_date || new Date().toLocaleDateString();
         } catch(e) { console.warn('Info update error:', e); }
 
@@ -670,7 +671,7 @@
                 : '<span class="check-badge ready">Pending</span>';
 
             var btnHtml = isDone 
-                ? (p.verificationImages && p.verificationImages.length > 0 ? `<a href="${GramSabha.API_BASE}${p.verificationImages[p.verificationImages.length-1]}" target="_blank" class="upload-btn" style="background:#f1f5f9; color:var(--text); text-decoration:none;"><span class="material-symbols-outlined" style="color:var(--primary)">image</span> View Photo</a>` : '') 
+                ? (p.verificationImages && p.verificationImages.length > 0 ? `<a href="${GramDrishti.API_BASE}${p.verificationImages[p.verificationImages.length-1]}" target="_blank" class="upload-btn" style="background:#f1f5f9; color:var(--text); text-decoration:none;"><span class="material-symbols-outlined" style="color:var(--primary)">image</span> View Photo</a>` : '') 
                 : `<label for="file-${step.key}" class="upload-btn" style="cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem;">
                      <span class="material-symbols-outlined">add_a_photo</span> Upload Photo
                    </label>
@@ -712,9 +713,6 @@
         if (!inputEl.files || !inputEl.files[0]) return;
         
         var file = inputEl.files[0];
-        var formData = new FormData();
-        formData.append('file', file);
-        formData.append('project_id', projectId);
         
         var label = inputEl.previousElementSibling;
         var originalHtml = label.innerHTML;
@@ -722,16 +720,11 @@
         label.style.pointerEvents = 'none';
         
         try {
-            // 1. Upload the photo
-            var uploadRes = await fetch(GramSabha.API_BASE + '/api/upload', {
-                method: 'POST',
-                body: formData
-            }).then(r => r.json());
+            // 1. Upload the photo directly to Cloudinary
+            var secureUrl = await GramDrishti.uploadVerificationPhoto(file);
             
-            if (!uploadRes.success) throw new Error(uploadRes.message || 'Upload failed');
-            
-            // 2. Verify step with photo URL
-            var updatedP = await GramSabha.verifyProjectStep(projectId, stepKey, uploadRes.path);
+            // 2. Verify step with Cloudinary URL
+            var updatedP = await GramDrishti.verifyProjectStep(projectId, stepKey, secureUrl);
             
             // Update local state
             var pIndex = allProjects.findIndex(x => x.id == projectId);
@@ -740,15 +733,15 @@
                 Object.assign(allProjects[pIndex], updatedP.data);
                 // Ensure verificationImages exists locally for immediate re-render
                 if (!allProjects[pIndex].verificationImages) allProjects[pIndex].verificationImages = [];
-                if (!allProjects[pIndex].verificationImages.includes(uploadRes.path)) {
-                    allProjects[pIndex].verificationImages.push(uploadRes.path);
+                if (!allProjects[pIndex].verificationImages.includes(secureUrl)) {
+                    allProjects[pIndex].verificationImages.push(secureUrl);
                 }
-                GramSabha.showNotification('Photo uploaded & step verified!', 'success');
+                GramDrishti.showNotification('Photo uploaded & step verified!', 'success');
                 renderVerification();
             }
         } catch (err) {
             console.error(err);
-            GramSabha.showNotification(err.message || 'Verification failed', 'error');
+            GramDrishti.showNotification(err.message || 'Verification failed', 'error');
             label.innerHTML = originalHtml;
             label.style.pointerEvents = 'auto';
             inputEl.value = ''; // Reset input
