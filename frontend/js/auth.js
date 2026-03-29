@@ -2,12 +2,12 @@
    GramDrishti — Supabase + Cloudinary API Layer
    =================================================== */
 
-// ── Config (replace with your actual values) ──────────
-const SUPABASE_URL  = 'https://vikieodqlvvntnxbtapm.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpa2llb2RxbHZ2bnRueGJ0YXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDk5OTksImV4cCI6MjA5MDI4NTk5OX0.fI-y-0NfMnBryD-ef7YFeW2t9RqvKq3zIRDvJl91ukI';
-const CLOUDINARY_CLOUD = 'dtjvvg1qu';
-const CLOUDINARY_PRESET_COMPLAINTS   = 'gramdrishti_complaints';
-const CLOUDINARY_PRESET_VERIFICATION = 'gramdrishti_verification';
+// ── Config (Loaded from env.js) ──────────
+const SUPABASE_URL  = window.ENV?.SUPABASE_URL || 'https://vikieodqlvvntnxbtapm.supabase.co'; // Fallback if env.js missing
+const SUPABASE_ANON = window.ENV?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpa2llb2RxbHZ2bnRueGJ0YXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDk5OTksImV4cCI6MjA5MDI4NTk5OX0.fI-y-0NfMnBryD-ef7YFeW2t9RqvKq3zIRDvJl91ukI';
+const CLOUDINARY_CLOUD = window.ENV?.CLOUDINARY_CLOUD || 'dtjvvg1qu';
+const CLOUDINARY_PRESET_COMPLAINTS   = window.ENV?.CLOUDINARY_PRESET_COMPLAINTS || 'gramdrishti_complaints';
+const CLOUDINARY_PRESET_VERIFICATION = window.ENV?.CLOUDINARY_PRESET_VERIFICATION || 'gramdrishti_verification';
 
 // ── Init Supabase client ───────────────────────────────
 // Add to every HTML page before auth.js:
@@ -107,9 +107,7 @@ async function listVillages() {
 
 // ── Issues / Complaints ────────────────────────────────
 async function getIssues(villageId, userId) {
-    let q = _supa.from('issues').select(`
-        *, projects(verification_images, progress)
-    `).order('created_at', { ascending: false }).limit(50);
+    let q = _supa.from('issues').select('*').order('created_at', { ascending: false }).limit(50);
 
     if (villageId) q = q.eq('village_id', villageId);
 
@@ -193,51 +191,123 @@ async function voteIssue(issueId, userId) {
     }
 }
 
-async function deleteIssue(issueId, userId) {
-    const { data: issue } = await _supa.from('issues').select('id, reported_by_id').eq('id', issueId).single();
-    if (!issue) throw new Error('Issue not found');
-    if (issue.reported_by_id !== userId) throw new Error('You can only delete your own issues');
-    await _supa.from('issue_votes').delete().eq('issue_id', issueId);
-    await _supa.from('issues').delete().eq('id', issueId);
-    return { success: true };
+async function deleteIssue(issueId, userId, callerRole) {
+    try {
+        const isAdmin = callerRole === 'admin';
+
+        if (isAdmin) {
+            // For admins: try the RPC function first (bypasses RLS)
+            const { error: rpcErr } = await _supa.rpc('admin_delete_issue', { p_issue_id: parseInt(issueId) });
+            if (!rpcErr) {
+                console.log(`✅ Issue ${issueId} deleted via admin RPC`);
+                return { success: true };
+            }
+            // RPC not available — fall through to direct delete (works if RLS is off or policy allows admin)
+            console.warn('admin_delete_issue RPC not available, trying direct delete:', rpcErr.message);
+        }
+
+        // Verify ownership for non-admins
+        if (!isAdmin) {
+            const { data: issue } = await _supa.from('issues').select('id, reported_by_id').eq('id', issueId).single();
+            if (!issue) throw new Error('Issue not found');
+            if (issue.reported_by_id !== userId) throw new Error('You can only delete your own issues');
+        }
+
+        // Delete votes first (FK constraint), swallow error if table doesn't exist
+        try { await _supa.from('issue_votes').delete().eq('issue_id', issueId); } catch(_) {}
+        
+        const { error } = await _supa.from('issues').delete().eq('id', issueId);
+        if (error) throw new Error('Delete failed: ' + error.message + '. Run the SQL fix in Supabase Dashboard (see console).');
+        
+        console.log(`✅ Issue ${issueId} deleted directly (admin: ${isAdmin})`);
+        return { success: true };
+    } catch(err) {
+        console.error('deleteIssue error:', err);
+        console.info(`%c📋 SQL FIX: Run this in Supabase SQL Editor to allow admin deletes:\n\nCREATE OR REPLACE FUNCTION admin_delete_issue(p_issue_id INT)\nRETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$\nBEGIN\n  DELETE FROM issue_votes WHERE issue_id = p_issue_id;\n  DELETE FROM issues WHERE id = p_issue_id;\nEND;\n$$;\n\nGRANT EXECUTE ON FUNCTION admin_delete_issue TO anon, authenticated;`, 'color:#f59e0b;font-size:12px');
+        throw err;
+    }
 }
 
 // ── Budget & Projects ──────────────────────────────────
 async function getBudget(villageId) {
-    const { data: summary } = await _supa.from('budget_summary').select('*').eq('village_id', villageId).single();
-    const { data: projects } = await _supa.from('projects').select('*').eq('village_id', villageId).order('id');
+    try {
+        const { data: summary } = await _supa.from('budget_summary').select('*').eq('village_id', villageId).single();
+        const { data: projects } = await _supa.from('projects').select('*').eq('village_id', villageId).order('id');
 
-    const realSpent   = (projects || []).reduce((s, p) => s + (p.spent || 0), 0);
-    const realPending = (projects || []).filter(p => !['completed','closed','resolved'].includes(p.status))
-        .reduce((s, p) => s + Math.max(0, (p.sanctioned || 0) - (p.spent || 0)), 0);
-    const totalReceived = summary?.total_received || 0;
+        const allProjects = projects || [];
+        const realSpent   = allProjects.reduce((s, p) => s + (p.spent || 0), 0);
+        
+        // totalSanctioned = sum of ALL committed/sanctioned amounts across all active projects
+        const totalSanctioned = allProjects
+            .filter(p => !['completed','closed','resolved'].includes(p.status))
+            .reduce((s, p) => s + (p.sanctioned || 0), 0);
+        
+        // pendingApproval = uncommitted remaining (sanctioned - spent) for in-progress projects
+        const realPending = allProjects
+            .filter(p => !['completed','closed','resolved'].includes(p.status))
+            .reduce((s, p) => s + Math.max(0, (p.sanctioned || 0) - (p.spent || 0)), 0);
+        
+        const totalReceived = summary?.total_received || 0;
 
-    return {
-        totalReceived,
-        totalSpent:    realSpent,
-        pendingApproval: realPending,
-        available:     totalReceived - realSpent - realPending,
-        fiscalYear:    summary?.fiscal_year || '',
-        projects:      projects || []
-    };
+        console.log(`💰 Budget for village ${villageId}: Received: ₹${totalReceived}, Sanctioned: ₹${totalSanctioned}, Spent: ₹${realSpent}, Pending: ₹${realPending}`);
+
+        return {
+            totalReceived,
+            totalSpent:      realSpent,
+            totalSanctioned, // ← NEW: total committed/sanctioned across all projects
+            pendingApproval: realPending,
+            available:       totalReceived - realSpent - realPending,
+            fiscalYear:      summary?.fiscal_year || '',
+            projects:        allProjects
+        };
+    } catch(err) {
+        console.error('getBudget error:', err);
+        return {
+            totalReceived: 0, totalSpent: 0, totalSanctioned: 0, 
+            pendingApproval: 0, available: 0, fiscalYear: '', projects: []
+        };
+    }
 }
 
-async function createProject({ name, category, sanctioned, villageId }) {
+async function createProject({ name, category, sanctioned, spent, villageId }) {
+    const s = parseFloat(sanctioned) || 0;
+    const sp = parseFloat(spent) || 0;
     const { data, error } = await _supa.from('projects').insert({
-        name, category, sanctioned: parseFloat(sanctioned),
+        name, category, sanctioned: s,
         village_id: parseInt(villageId),
-        status: 'in_progress', progress: 0, released: 0, spent: 0
+        status: 'in_progress', progress: 0, released: sp, spent: sp
     }).select().single();
     if (error) throw new Error(error.message);
     return data;
 }
 
-async function assignProject(projectId, contractorName) {
-    const { data, error } = await _supa.from('projects')
-        .update({ contractor: contractorName, status: 'in_progress' })
-        .eq('id', projectId).select().single();
-    if (error) throw new Error(error.message);
-    return data;
+async function assignProject(projectId, contractorName, sanctionedAmount = null) {
+    try {
+        const updatePayload = { contractor: contractorName, status: 'in_progress' };
+        
+        // If sanctionedAmount is provided, ALWAYS update it (even if it's 0, but typically it should be > 0)
+        if (sanctionedAmount !== null && sanctionedAmount !== undefined && sanctionedAmount >= 0) {
+            updatePayload.sanctioned = parseFloat(sanctionedAmount);
+            console.log(`🔄 Assigning project ${projectId} to ${contractorName} with sanctioned: ₹${sanctionedAmount}`);
+        } else {
+            console.log(`⚠️ Warning: assignProject called without sanctioned amount for project ${projectId}`);
+        }
+        
+        const { data, error } = await _supa.from('projects')
+            .update(updatePayload)
+            .eq('id', projectId).select().single();
+        
+        if (error) {
+            console.error(`❌ Error assigning project ${projectId}:`, error.message);
+            throw new Error(error.message);
+        }
+        
+        console.log(`✅ Project ${projectId} assigned successfully. Database sanctioned: ₹${data?.sanctioned || 0}`);
+        return data;
+    } catch(err) {
+        console.error('assignProject error:', err);
+        throw err;
+    }
 }
 
 // Convert an issue to a project and assign it to a contractor
@@ -263,6 +333,25 @@ async function assignIssueToContractor(issueId, contractorName, sanctionedAmount
     if (updErr) console.warn('Failed to update issue status', updErr);
     
     return newProj;
+}
+
+async function updateProjectSpent(projectId, addedAmount) {
+    const { data: proj, error: fetchErr } = await _supa.from('projects').select('spent, sanctioned').eq('id', projectId).single();
+    if (fetchErr || !proj) throw new Error('Project not found');
+
+    const amount = parseFloat(addedAmount);
+    if (isNaN(amount) || amount <= 0) throw new Error('Invalid expense amount');
+
+    const newSpent = (parseFloat(proj.spent) || 0) + amount;
+    
+    const { data, error } = await _supa.from('projects')
+        .update({ spent: newSpent })
+        .eq('id', projectId)
+        .select()
+        .single();
+        
+    if (error) throw new Error(error.message);
+    return data;
 }
 
 async function verifyProjectStep(projectId, step, cloudinaryUrl) {
@@ -313,30 +402,122 @@ async function uploadVerificationPhoto(file) { return uploadToCloudinary(file, C
 
 // ── Activities ─────────────────────────────────────────
 async function getActivities(villageId) {
-    let q = _supa.from('activities').select('*').order('created_at', { ascending: false }).limit(20);
-    if (villageId) q = q.eq('village_id', villageId);
-    const { data } = await q;
-    return data || [];
+    try {
+        let q = _supa.from('activities').select('*').order('created_at', { ascending: false }).limit(20);
+        if (villageId) q = q.eq('village_id', villageId);
+        const { data, error } = await q;
+        if (error) {
+            console.warn('getActivities error:', error);
+            return [];
+        }
+        return data || [];
+    } catch(err) {
+        console.error('getActivities exception:', err);
+        return [];
+    }
 }
 
 // ── Admin ──────────────────────────────────────────────
 async function getAdminStats() {
-    const [{ count: vil }, { count: usr }, { count: res }, { data: funds }] = await Promise.all([
-        _supa.from('villages').select('*', { count: 'exact', head: true }),
-        _supa.from('users').select('*', { count: 'exact', head: true }),
-        _supa.from('issues').select('*', { count: 'exact', head: true }).eq('status', 'resolved'),
-        _supa.from('projects').select('sanctioned')
-    ]);
-    return {
-        activeVillages: vil || 0, registeredUsers: usr || 0,
-        issuesResolved: res || 0,
-        totalFundsTracked: (funds || []).reduce((s, p) => s + (p.sanctioned || 0), 0)
-    };
+    try {
+        const [{ count: vil, error: vilErr }, { count: usr, error: usrErr }, { count: res, error: resErr }, { data: budgetData, error: budErr }] = await Promise.all([
+            _supa.from('villages').select('*', { count: 'exact', head: true }),
+            _supa.from('users').select('*', { count: 'exact', head: true }),
+            _supa.from('issues').select('*', { count: 'exact', head: true }).eq('status', 'resolved'),
+            _supa.from('budget_summary').select('total_received')
+        ]);
+        
+        if (vilErr) console.warn('Village count error:', vilErr);
+        if (usrErr) console.warn('User count error:', usrErr);
+        if (resErr) console.warn('Resolved issues count error:', resErr);
+        if (budErr) console.warn('Budget data error:', budErr);
+        
+        return {
+            activeVillages: vil || 0, registeredUsers: usr || 0,
+            issuesResolved: res || 0,
+            totalFundsTracked: (budgetData || []).reduce((s, b) => s + (b.total_received || 0), 0)
+        };
+    } catch(err) {
+        console.error('getAdminStats error:', err);
+        return { activeVillages: 0, registeredUsers: 0, issuesResolved: 0, totalFundsTracked: 0 };
+    }
 }
 
 async function getAdminUsers() {
-    const { data } = await _supa.from('users').select('*, villages(name)').order('id', { ascending: false });
-    return (data || []).map(u => ({ ...u, villageName: u.villages?.name }));
+    try {
+        const { data, error } = await _supa.from('users').select('*, villages(name)').order('id', { ascending: false });
+        if (error) {
+            console.warn('getAdminUsers error:', error);
+            return [];
+        }
+        return (data || []).map(u => ({ ...u, villageName: u.villages?.name }));
+    } catch(err) {
+        console.error('getAdminUsers exception:', err);
+        return [];
+    }
+}
+
+async function getAdminVillagesWithDetails() {
+    try {
+        // Fetch all villages
+        const { data: villages, error: villageErr } = await _supa.from('villages').select('*').order('name');
+        
+        if (villageErr || !villages || villages.length === 0) {
+            console.warn('Villages fetch error:', villageErr);
+            return [];
+        }
+        
+        // Get all users by village
+        const { data: allUsers, error: userErr } = await _supa.from('users').select('id, name, role, village_id');
+        if (userErr) console.warn('Users fetch error:', userErr);
+        
+        // Get all issues by village - select actual columns that exist
+        const { data: allIssues, error: issueErr } = await _supa.from('issues').select('id, village_id, status, title, description');
+        if (issueErr) console.warn('Issues fetch error:', issueErr);
+        
+        return villages.map(v => {
+            const villageUsers = allUsers?.filter(u => u.village_id === v.id) || [];
+            const sarpanch = villageUsers.find(u => u.role === 'sarpanch');
+            const villagers = villageUsers.filter(u => u.role === 'villager');
+            const villageIssues = allIssues?.filter(i => i.village_id === v.id) || [];
+            
+            return {
+                id: v.id,
+                name: v.name,
+                sarpanchName: sarpanch?.name || 'Unassigned',
+                villagerCount: villagers.length,
+                totalUsers: villageUsers.length,
+                issueCount: villageIssues.length,
+                openIssues: villageIssues.filter(i => i.status !== 'resolved' && i.status !== 'closed').length,
+                resolvedIssues: villageIssues.filter(i => i.status === 'resolved' || i.status === 'closed').length,
+                issues: villageIssues
+            };
+        });
+    } catch(err) {
+        console.error('getAdminVillagesWithDetails error:', err);
+        return [];
+    }
+}
+
+async function grantFunds(villageId, amount) {
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) throw new Error("Invalid fund amount");
+    
+    const { data: summary } = await _supa.from('budget_summary').select('*').eq('village_id', villageId).single();
+    const newTotal = (summary?.total_received || 0) + amt;
+    
+    if (summary) {
+        const { error } = await _supa.from('budget_summary').update({ total_received: newTotal }).eq('village_id', villageId);
+        if (error) throw new Error(error.message);
+    } else {
+        const { error } = await _supa.from('budget_summary').insert({ 
+            village_id: parseInt(villageId), 
+            total_received: newTotal, 
+            fiscal_year: '2023-2024' 
+        });
+        if (error) throw new Error(error.message);
+    }
+    return newTotal;
 }
 
 // ── Utilities ──────────────────────────────────────────
@@ -371,7 +552,7 @@ window.GramDrishti = {
     // Data
     getVillage, listVillages, getIssues, createIssue, voteIssue, deleteIssue,
     getBudget, createProject, assignProject, assignIssueToContractor, verifyProjectStep,
-    getActivities, getAdminStats, getAdminUsers,
+    getActivities, getAdminAlerts: getActivities, getAdminStats, getAdminUsers, getAdminVillagesWithDetails, grantFunds, updateProjectSpent,
     // Media
     uploadComplaintMedia, uploadVerificationPhoto, uploadToCloudinary,
     CLOUDINARY_CLOUD,

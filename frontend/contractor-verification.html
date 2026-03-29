@@ -535,8 +535,13 @@
                         <p id="infoCategory">—</p>
                     </div>
                     <div class="project-item">
-                        <label>Sanctioned Amount</label>
-                        <p id="infoAmount">—</p>
+                        <label>Committed Amount</label>
+                        <p id="infoSanctioned">—</p>
+                    </div>
+                    <div class="project-item">
+                        <label>Spent Amount</label>
+                        <p id="infoSpent" style="margin-bottom: 0.5rem;">—</p>
+                        <button id="addExpBtn" onclick="addProjectExpense()" style="padding:0.25rem 0.75rem; font-size:0.75rem; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:4px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; transition:all 0.2s;"><span class="material-symbols-outlined" style="font-size:1rem;">add</span> Add Expense</button>
                     </div>
                     <div class="project-item">
                         <label>Start Date</label>
@@ -577,7 +582,8 @@
     </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/auth.js"></script>
+<script src="js/env.js"></script>
+    <script src="js/auth.js"></script>
 <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
 <script>
@@ -652,7 +658,10 @@
         try {
             document.getElementById('infoContractor').textContent = p.contractor || '—';
             document.getElementById('infoCategory').textContent = p.category || 'Infrastructure';
-            document.getElementById('infoAmount').textContent = GramDrishti.formatCurrency ? GramDrishti.formatCurrency(p.sanctioned) : '₹' + p.sanctioned;
+            
+            document.getElementById('infoSanctioned').textContent = GramDrishti.formatCurrency ? GramDrishti.formatCurrency(p.sanctioned || 0) : '₹' + (p.sanctioned || 0);
+            document.getElementById('infoSpent').textContent = GramDrishti.formatCurrency ? GramDrishti.formatCurrency(p.spent || 0) : '₹' + (p.spent || 0);
+            
             document.getElementById('infoDate').textContent = p.start_date || new Date().toLocaleDateString();
         } catch(e) { console.warn('Info update error:', e); }
 
@@ -661,7 +670,7 @@
         var checklistHtml = '';
 
         verifySteps.forEach(function(step) {
-            var isDone = p[step.prop] === true;
+            var isDone = p[step.key] === true;
             if (isDone) completedCount++;
 
             var statusClass = isDone ? 'completed' : 'pending';
@@ -747,6 +756,38 @@
             inputEl.value = ''; // Reset input
         }
     }
+
+    window.addProjectExpense = async function() {
+        var pid = document.getElementById('projectSelect').value;
+        var p = allProjects.find(x => x.id == pid);
+        if (!p) return;
+        
+        var val = prompt(`Enter new expense amount (₹) to add to ${escapeHtml(p.name)}:\n\nCurrent Spent: ${GramDrishti.formatCurrency ? GramDrishti.formatCurrency(p.spent || 0) : '₹' + (p.spent || 0)}\nCommitted: ${GramDrishti.formatCurrency ? GramDrishti.formatCurrency(p.sanctioned || 0) : '₹' + (p.sanctioned || 0)}`);
+        if (!val) return;
+        
+        var amt = parseFloat(val);
+        if (isNaN(amt) || amt <= 0) {
+            GramDrishti.showNotification('Invalid amount entered', 'error');
+            return;
+        }
+        
+        try {
+            var btn = document.getElementById('addExpBtn');
+            if (btn) btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1rem; animation: spin 1s linear infinite;">sync</span> Updating...';
+            
+            var updatedP = await GramDrishti.updateProjectSpent(p.id, amt);
+            
+            // Sync local state
+            Object.assign(p, updatedP);
+            GramDrishti.showNotification('Expense successfully logged and synced with village fund', 'success');
+            renderVerification();
+        } catch (e) {
+            GramDrishti.showNotification(e.message || 'Error updating expenses', 'error');
+            renderVerification();
+        }
+    };
+    
+
 
     function escapeHtml(str) {
         return String(str).replace(/[&<>"']/g, function(s){

@@ -400,6 +400,33 @@
     </aside>
 </div>
 
+<!-- ── Add Contractor Modal ── -->
+<div id="addContractorModal" class="db-modal" aria-modal="true" role="dialog">
+    <div class="db-modal-content">
+        <div class="db-modal-head">
+            <h2>Add New Contractor</h2>
+            <button type="button" class="db-modal-close" onclick="closeAddModal()" aria-label="Close modal">&times;</button>
+        </div>
+        <form id="addContractorForm">
+            <div class="db-form-group">
+                <label class="db-form-label">Company / Contractor Name</label>
+                <input type="text" id="addName" class="db-input" required>
+            </div>
+            <div class="db-form-group">
+                <label class="db-form-label">Specialty / Type</label>
+                <input type="text" id="addType" class="db-input" required>
+            </div>
+            <div class="db-form-group">
+                <label class="db-form-label">Phone Number</label>
+                <input type="text" id="addPhone" class="db-input" required>
+            </div>
+            <div class="db-form-group">
+                <label class="db-form-label">Location (City/District)</label>
+                <input type="text" id="addLocation" class="db-input" required>
+            </div>
+            <div class="db-modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+                <button type="submit" class="btn-submit">Register Contractor</button>
             </div>
         </form>
     </div>
@@ -409,7 +436,7 @@
 <div id="assignProjectModal" class="db-modal" aria-modal="true" role="dialog">
     <div class="db-modal-content">
         <div class="db-modal-head">
-            <h2>Assign Complaint to Contractor</h2>
+            <h2 id="assignModalTitle">Assign Work to Contractor</h2>
             <button class="db-modal-close" onclick="closeAssignModal()" aria-label="Close modal">&times;</button>
         </div>
         <form id="assignProjectForm">
@@ -429,10 +456,16 @@
             </div>
             <!-- Fallback: manual project select when no issue in URL -->
             <div id="assignProjectGroup" class="db-form-group" style="display:none">
-                <label class="db-form-label">Select Unassigned Project</label>
+                <label class="db-form-label">Select Unassigned Project / Complaint</label>
                 <select id="assignProjectSelect" class="db-input">
                     <option value="">Loading projects...</option>
                 </select>
+            </div>
+            <!-- Sanctioned fund input shown for existing budget projects -->
+            <div id="existingProjectFundGroup" class="db-form-group" style="display:none; margin-top:0.75rem">
+                <label class="db-form-label">Sanctioned Fund for this Project (₹)</label>
+                <input type="number" id="existingProjectFund" class="db-input" placeholder="e.g. 75000" min="0">
+                <p style="font-size:0.75rem;color:#64748b;margin-top:0.25rem">Amount committed to this contractor. Will appear as Committed on all dashboards.</p>
             </div>
             <div class="db-modal-actions">
                 <button type="button" class="btn-cancel" onclick="closeAssignModal()">Cancel</button>
@@ -443,7 +476,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/auth.js"></script>
+<script src="js/env.js"></script>
+    <script src="js/auth.js"></script>
 <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
 <script>
@@ -688,7 +722,22 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.textContent = 'Assigning...';
         
         try {
-            await GramDrishti.assignProject(projId, window.currentAssignee);
+            var sanctionedAmount = null;
+            // Check if there's a sanctioned fund input (from new assignment modal)
+            var fundInput = document.getElementById('dynamicIssueFund');
+            if (fundInput && fundInput.value) {
+                sanctionedAmount = parseInt(fundInput.value);
+            }
+            
+            // Validate sanctioned amount for projects
+            if (projId && !sanctionedAmount) {
+                GramDrishti.showNotification('Committed amount is required', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Confirm Assignment';
+                return;
+            }
+            
+            await GramDrishti.assignProject(projId, window.currentAssignee, sanctionedAmount);
             // Sync contractor stats from real DB data
             var c = contractors.find(x => x.name === window.currentAssignee);
             if (c) {
@@ -895,37 +944,113 @@ window.assignProject = async function(name) {
     var issueBox   = document.getElementById('assignIssueBox');
     var projGroup  = document.getElementById('assignProjectGroup');
     var sel        = document.getElementById('assignProjectSelect');
+    var titleEl    = document.getElementById('assignModalTitle');
 
     if (_currentIssueId && _currentIssueData) {
-        // Got here via sarpanch dashboard — show the complaint
+        if (titleEl) titleEl.textContent = 'Assign Complaint to Contractor';
         issueBox.style.display  = 'block';
         projGroup.style.display = 'none';
         document.getElementById('assignIssueTitle').textContent = _currentIssueData.title || _currentIssueId;
         document.getElementById('assignIssueDesc').textContent  = _currentIssueData.description || 'No description';
         document.getElementById('assignIssueFund').required = true;
         document.getElementById('assignProjectSelect').required = false;
-    } else {
-        // Generic: pick from unassigned budget projects
-        issueBox.style.display  = 'none';
-        projGroup.style.display = 'block';
-        document.getElementById('assignIssueFund').required = false;
-        document.getElementById('assignProjectSelect').required = true;
-        sel.innerHTML = '<option value="">Loading projects...</option>';
+        
+        var dFund = document.getElementById('dynamicIssueFund');
+        if (dFund) dFund.required = false;
+
+        document.getElementById('assignSubmitBtn').disabled = false;
+        document.getElementById('assignSubmitBtn').textContent = 'Confirm Assignment';
+        return; // Early return to avoid loading generic dropdown
+    }
+
+    if (titleEl) titleEl.textContent = 'Assign Work / Complaint';
+    issueBox.style.display  = 'none';
+    projGroup.style.display = 'block';
+    
+    // Create a dynamic fund input for both projects and issues
+    var fundGroup = document.getElementById('dynamicFundGroup');
+    if (!fundGroup) {
+        fundGroup = document.createElement('div');
+        fundGroup.id = 'dynamicFundGroup';
+        fundGroup.className = 'db-form-group';
+        fundGroup.style.marginTop = '1rem';
+        fundGroup.innerHTML = '<label class="db-form-label">Sanctioned Fund Required (₹)</label><input type="number" id="dynamicIssueFund" class="db-input" placeholder="e.g. 50000" min="1000">';
+        projGroup.appendChild(fundGroup);
+    }
+
+    sel.innerHTML = '<option value="">Loading tasks...</option>';
+    var btn = document.getElementById('assignSubmitBtn');
+    btn.disabled = true;
+    
+    try {
+        var userSession = GramDrishti.getCurrentUser() || JSON.parse(localStorage.getItem('gram_drishti_session') || '{}');
+        var villageId   = userSession.villageId || userSession.village_id || 1;
+        
+        let projects = [];
+        let issues = [];
+        
         try {
-            var userSession = GramDrishti.getCurrentUser() || JSON.parse(localStorage.getItem('gram_drishti_session') || '{}');
-            var villageId   = userSession.villageId || userSession.village_id || 1;
-            var budgetData  = await GramDrishti.getBudget(villageId);
-            if (budgetData && budgetData.projects) {
-                var unassigned = budgetData.projects.filter(function(p) {
-                    return !p.contractor && (p.status === 'pending' || p.status === 'approved' || p.status === 'pending_approval' || p.status === 'in_progress');
-                });
-                sel.innerHTML = unassigned.length
-                    ? unassigned.map(function(p) { return '<option value="' + p.id + '">' + p.name + ' (' + GramDrishti.formatCurrency(p.sanctioned) + ')</option>'; }).join('')
-                    : '<option value="">No unassigned projects available</option>';
+            var bData = await GramDrishti.getBudget(villageId);
+            if (bData && bData.projects) projects = bData.projects.filter(p => !p.contractor && (p.status === 'pending' || p.status === 'approved' || p.status === 'pending_approval' || p.status === 'in_progress'));
+        } catch(e) {}
+        
+        try {
+            var allIssues = await GramDrishti.getIssues();
+            issues = allIssues.filter(i => (!i.contractor && i.status !== 'resolved' && (i.village_id == villageId || i.villageId == villageId)));
+        } catch(e) {}
+
+        // Now set up the select change handler with access to projects data
+        sel.onchange = function() {
+            var fundInput = document.getElementById('dynamicIssueFund');
+            if (this.value.startsWith('issue_')) {
+                fundInput.required = true;
+                fundInput.value = '';
+                fundInput.placeholder = 'Amount is required (₹)';
+            } else if (this.value.startsWith('project_')) {
+                fundInput.required = true;  // REQUIRED for projects too!
+                // Pre-populate with existing project's sanctioned amount if available
+                var projId = this.value.replace('project_', '');
+                var proj = projects.find(p => p.id == projId);
+                if (proj && proj.sanctioned && proj.sanctioned > 0) {
+                    fundInput.value = proj.sanctioned;
+                    fundInput.placeholder = 'Update or confirm amount (₹)';
+                } else {
+                    fundInput.value = '';
+                    fundInput.placeholder = 'Enter committed amount (₹)';
+                }
+            } else {
+                fundInput.required = false;
+                fundInput.value = '';
+                fundInput.placeholder = 'Amount required for issues';
             }
-        } catch(err) {
-            sel.innerHTML = '<option value="">Error loading projects</option>';
+        };
+
+        let optionsHtml = '<option value="">Select a Task</option>';
+        if (projects.length > 0) {
+            optionsHtml += '<optgroup label="Budgeted Projects">';
+            projects.forEach(p => { optionsHtml += `<option value="project_${p.id}">${p.name} (${GramDrishti.formatCurrency(p.sanctioned)})</option>`; });
+            optionsHtml += '</optgroup>';
         }
+        if (issues.length > 0) {
+            optionsHtml += '<optgroup label="Villager Complaints">';
+            issues.forEach(i => { optionsHtml += `<option value="issue_${i.id}">${i.title}</option>`; });
+            optionsHtml += '</optgroup>';
+        }
+
+        if (projects.length === 0 && issues.length === 0) {
+             sel.innerHTML = '<option value="">No Tasks or Complaints Available</option>';
+             sel.required = false;
+             btn.disabled = true;
+             btn.textContent = 'No Tasks Available';
+        } else {
+             sel.innerHTML = optionsHtml;
+             sel.required = true;
+             btn.disabled = false;
+             btn.textContent = 'Confirm Assignment';
+        }
+    } catch(err) {
+        sel.innerHTML = '<option value="">Error loading tasks</option>';
+        sel.required = false;
     }
 };
 
@@ -936,14 +1061,32 @@ document.getElementById('assignProjectForm').addEventListener('submit', async fu
     btn.textContent = 'Assigning...';
     try {
         if (_currentIssueId) {
-            // Issue-based assignment → call the new Supabase SDK method
-            var fundReq = document.getElementById('assignIssueFund').value;
-            await GramDrishti.assignIssueToContractor(_currentIssueId, window.currentAssignee, parseInt(fundReq) || 0);
+            var issueFundReq = document.getElementById('assignIssueFund').value;
+            console.log(`📋 Assigning issue ${_currentIssueId} with fund: ₹${issueFundReq}`);
+            await GramDrishti.assignIssueToContractor(_currentIssueId, window.currentAssignee, parseInt(issueFundReq) || 0);
         } else {
-            // Project-based assignment
-            var projId = document.getElementById('assignProjectSelect').value;
-            if (!projId) { GramDrishti.showNotification('Please select a project', 'error'); btn.disabled = false; btn.textContent = 'Confirm Assignment'; return; }
-            await GramDrishti.assignProject(projId, window.currentAssignee);
+            var selectedVal = document.getElementById('assignProjectSelect').value;
+            if (!selectedVal) { GramDrishti.showNotification('Please select a task', 'error'); btn.disabled = false; btn.textContent = 'Confirm Assignment'; return; }
+            
+            if (selectedVal.startsWith('issue_')) {
+                var issueId = selectedVal.replace('issue_', '');
+                var fundReq = document.getElementById('dynamicIssueFund').value;
+                console.log(`📋 Assigning issue ${issueId} with fund: ₹${fundReq}`);
+                await GramDrishti.assignIssueToContractor(issueId, window.currentAssignee, parseInt(fundReq) || 0);
+            } else {
+                var projId = selectedVal.replace('project_', '');
+                var sanctionedAmount = document.getElementById('dynamicIssueFund').value;
+                console.log(`📦 Assigning project ${projId} to ${window.currentAssignee} with sanctioned: ₹${sanctionedAmount}`);
+                // Validate that sanctioned amount is provided
+                if (!sanctionedAmount || parseInt(sanctionedAmount) <= 0) {
+                    GramDrishti.showNotification('Please enter a valid committed amount', 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Confirm Assignment';
+                    return;
+                }
+                // ALWAYS pass the sanctioned amount - this is critical
+                await GramDrishti.assignProject(projId, window.currentAssignee, parseInt(sanctionedAmount));
+            }
         }
 
         // Sync contractor stats
@@ -958,6 +1101,7 @@ document.getElementById('assignProjectForm').addEventListener('submit', async fu
                     c.projects  = myProjects.length;
                     c.valueNum  = myProjects.reduce(function(s, p) { return s + (p.sanctioned || 0); }, 0);
                     c.value     = GramDrishti.formatCurrency(c.valueNum);
+                    console.log(`✅ Contractor ${c.name} now has ${c.projects} projects worth ₹${c.valueNum}`);
                 }
             } catch(_) {}
             localStorage.setItem('gs_contractors', JSON.stringify(contractors));

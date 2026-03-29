@@ -1,0 +1,9 @@
+# Local environments
+.env
+frontend/js/env.js
+
+# Dependencies and caches
+node_modules/
+__pycache__/
+.venv/
+.DS_Store

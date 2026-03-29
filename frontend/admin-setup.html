@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Setup Admin User</title>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/env.js"></script>
+    <script src="js/auth.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; max-width: 500px; margin: 0 auto; line-height: 1.6; }
+        input, select, button { display: block; width: 100%; margin-bottom: 1rem; padding: 0.75rem; font-size: 1rem; }
+        button { background: #16a34a; color: white; border: none; cursor: pointer; font-weight: bold; }
+        #status { padding: 1rem; margin-top: 1rem; display: none; }
+        .success { background: #dcfce7; color: #166534; }
+        .error { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+    <h1>Create System Admin</h1>
+    <p>This page will securely create an administrator account using the API.</p>
+    
+    <label>Admin Name</label>
+    <input type="text" id="aName" value="System Admin">
+    
+    <label>Mobile Number (For Login)</label>
+    <input type="text" id="aMobile" placeholder="e.g. 9999999999" maxlength="12">
+    
+    <label>Login PIN (6 Digits)</label>
+    <input type="password" id="aPin" placeholder="Enter a 6-digit PIN" maxlength="6">
+    
+    <button onclick="createAdmin()">Generate Admin Account</button>
+    
+    <div id="status"></div>
+
+    <script>
+        async function createAdmin() {
+            const btn = document.querySelector('button');
+            const statusBox = document.getElementById('status');
+            const name = document.getElementById('aName').value.trim();
+            const mobile = document.getElementById('aMobile').value.trim();
+            const pin = document.getElementById('aPin').value.trim();
+            
+            statusBox.style.display = 'block';
+            statusBox.className = '';
+            
+            if(mobile.length < 10 || pin.length < 6) {
+                statusBox.textContent = 'Mobile must be 10 digits and PIN must be 6 digits.';
+                statusBox.className = 'error';
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+            
+            try {
+                // Call the existing registerUser from auth.js, forcefully injecting 'admin' as role
+                await GramDrishti.registerUser({
+                    name: name,
+                    mobile: mobile,
+                    pin: pin,
+                    role: 'admin',
+                    villageId: 1, // Default to HQ/Village 1
+                    ward: 'HQ'
+                });
+                
+                statusBox.textContent = 'Success! Admin user created. You can now login with these credentials.';
+                statusBox.className = 'success';
+            } catch (err) {
+                statusBox.textContent = 'Error: ' + err.message;
+                statusBox.className = 'error';
+                console.error(err);
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Generate Admin Account';
+        }
+    </script>
+</body>
+</html>

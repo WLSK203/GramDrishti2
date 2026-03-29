@@ -536,9 +536,9 @@
                     <span class="material-symbols-outlined" style="font-size:1rem">arrow_back</span>
                     Back to Dashboard
                 </a>
-                <a href="#" class="active">Budget Overview</a>
-                <a href="#">Active Projects</a>
-                <a href="#">Audit Reports</a>
+                <a href="#overview" class="active">Budget Overview</a>
+                <a href="#projects">Active Projects</a>
+                <a href="#activity">Audit Reports</a>
             </nav>
 
             <div class="village-select">
@@ -549,7 +549,7 @@
         </div>
     </header>
 
-    <main class="ledger-main">
+    <main class="ledger-main" id="overview">
         <div class="page-title">
             <h2>Public Budget & Work Ledger</h2>
             <p>Track every rupee spent in your village. 100% transparent financial records.</p>
@@ -591,14 +591,14 @@
         </div>
 
         <!-- Projects Section -->
-        <section class="projects-section">
+        <section class="projects-section" id="projects">
             <div class="section-header">
                 <h3>Active Projects</h3>
-                <div class="filter-tabs">
-                    <button class="filter-tab active">All</button>
-                    <button class="filter-tab">In Progress</button>
-                    <button class="filter-tab">Completed</button>
-                    <button class="filter-tab">Verified</button>
+                <div class="filter-tabs" id="ledgerFilterTabs">
+                    <button class="filter-tab active" data-filter="all">All</button>
+                    <button class="filter-tab" data-filter="in_progress">In Progress</button>
+                    <button class="filter-tab" data-filter="completed">Completed</button>
+                    <button class="filter-tab" data-filter="verified">Verified</button>
                 </div>
             </div>
 
@@ -608,7 +608,7 @@
         </section>
 
         <!-- Activity Section -->
-        <section class="activity-section">
+        <section class="activity-section" id="activity">
             <h3>Recent Activity</h3>
             <div class="activity-list" id="ledgerActivityList">
                 <!-- Filled from API -->
@@ -617,60 +617,99 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/auth.js"></script>
+<script src="js/env.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
             var fmt = typeof GramDrishti !== 'undefined' && GramDrishti.formatCurrency ? GramDrishti.formatCurrency : function(n) { return '₹' + (n || 0).toLocaleString('en-IN'); };
             try {
+                var currentUser = typeof GramDrishti !== 'undefined' ? GramDrishti.getCurrentUser() : null;
+                var rawUserEnv = JSON.parse(localStorage.getItem('gram_drishti_session') || '{}');
+                var userVillageId = (currentUser ? (currentUser.villageId || currentUser.village_id) : null) || rawUserEnv.villageId || rawUserEnv.village_id;
+
                 var villages = await GramDrishti.listVillages();
-                var village = villages && villages.length > 0 ? villages[0] : null;
-                var villageId = village ? village.id : null;
+                var village = null;
+
+                if (userVillageId) {
+                    village = villages.find(function(v) { return String(v.id) === String(userVillageId); });
+                }
+                if (!village && villages.length > 0) {
+                    village = villages[0];
+                }
+
+                window._currentLedgerVillageId = village ? village.id : 1;
                 if (village) document.getElementById('ledgerVillageName').textContent = (village.name || '') + ' Village';
             } catch (e) {}
             try {
-                var budget = await GramDrishti.getBudget(villageId || 1) || {};
-                var total = budget.totalReceived || 0;
-                var spent = budget.totalSpent || 0;
-                var pending = budget.pendingApproval || 0;
-                var sanctioned = budget.sanctionedFunds !== undefined ? budget.sanctionedFunds : pending;
-                
+                var budget = await GramDrishti.getBudget(window._currentLedgerVillageId || 1) || {};
+                var total      = budget.totalReceived    || 0;
+                var spent      = budget.totalSpent       || 0;
+                var sanctioned = budget.totalSanctioned  || 0; // total committed (sum of all project sanctioned amounts)
+                var remaining  = budget.pendingApproval  || 0; // uncommitted remaining balance
+
                 document.getElementById('ledgerTotalReceived').textContent = fmt(total);
-                
                 document.getElementById('ledgerSpent').textContent = fmt(spent);
-                document.getElementById('ledgerPendingApproval').textContent = fmt(sanctioned);
+                document.getElementById('ledgerPendingApproval').textContent = fmt(sanctioned); // "Sanctioned Funds" card shows total committed
                 document.getElementById('ledgerFiscalSub').textContent = (budget.fiscalYear || 'FY 2024-25') + (budget.lastUpdated ? ' • Updated ' + budget.lastUpdated : '');
-                var pctReleased = total ? Math.round((spent / total) * 100) : 0;
-                var pctPending = total ? Math.round((pending / total) * 100) : 0;
-                document.getElementById('ledgerBarSpent').style.width = pctReleased + '%';
-                document.getElementById('ledgerBarPending').style.width = pctPending + '%';
-                document.getElementById('ledgerReleasedLabel').textContent = 'Released (' + pctReleased + '%)';
-                document.getElementById('ledgerPendingLabel').textContent = 'Sanctioned (' + pctPending + '%)';
-                var projects = budget.projects || [];
-                var listEl = document.getElementById('ledgerProjectsList');
-                if (!projects.length) listEl.innerHTML = '<p>No projects to display.</p>';
-                else listEl.innerHTML = projects.map(function(p) {
-                    var prog = p.progress || 0;
-                    var startStr = p.startDate ? 'Started: ' + new Date(p.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-                    var endStr = p.completedDate ? 'Completed: ' + new Date(p.completedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : (p.deadline ? 'Deadline: ' + new Date(p.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
-                    var verHtml = [
-                        p.verificationsPhotos ? '<div class="verify-item success"><span class="material-symbols-outlined">check_circle</span><span>Photo Verified</span></div>' : '<div class="verify-item"><span class="material-symbols-outlined">pending</span><span>Photo Pending</span></div>',
-                        p.verificationsGps ? '<div class="verify-item success"><span class="material-symbols-outlined">check_circle</span><span>GPS Confirmed</span></div>' : '<div class="verify-item"><span class="material-symbols-outlined">pending</span><span>GPS Pending</span></div>',
-                        p.verificationsCommunity ? '<div class="verify-item success"><span class="material-symbols-outlined">check_circle</span><span>Community Approved</span></div>' : '<div class="verify-item"><span class="material-symbols-outlined">pending</span><span>Community Pending</span></div>',
-                        p.verificationsAudit ? '<div class="verify-item success"><span class="material-symbols-outlined">verified</span><span>Audit Complete</span></div>' : ''
-                    ].join('');
-                    return '<div class="project-card">' +
-                        '<div class="project-header"><div class="project-main"><h4>' + (p.name || '—') + '</h4><p>' + (p.externalId || '') + ' • ' + startStr + (endStr ? ' ' + endStr : '') + '</p></div>' +
-                        '<div class="project-status"><span class="status-badge ' + (p.status || '').replace(/\s+/g, '-') + '">' + (p.status || '—') + '</span></div></div>' +
-                        '<div class="project-funds">' +
-                        '<div class="fund-item"><span class="fund-label">Sanctioned</span><span class="fund-amount">' + fmt(p.sanctioned) + '</span></div>' +
-                        '<div class="fund-item"><span class="fund-label">Released</span><span class="fund-amount">' + fmt(p.released) + '</span></div>' +
-                        '<div class="fund-item"><span class="fund-label">Spent</span><span class="fund-amount spent">' + fmt(p.spent) + '</span></div>' +
-                        '</div>' +
-                        '<div class="project-progress"><div class="project-progress-bar"><div class="project-progress-fill" style="width:' + prog + '%"></div></div><span>' + prog + '%</span></div>' +
-                        '<div class="project-verification">' + verHtml + '</div></div>';
-                }).join('');
+
+                var pctReleased  = total ? Math.round((spent      / total) * 100) : 0;
+                var pctSanctioned = total ? Math.round((sanctioned / total) * 100) : 0;
+                document.getElementById('ledgerBarSpent').style.width   = pctReleased   + '%';
+                document.getElementById('ledgerBarPending').style.width = pctSanctioned + '%';
+                document.getElementById('ledgerReleasedLabel').textContent  = 'Released ('   + pctReleased   + '%)';
+                document.getElementById('ledgerPendingLabel').textContent   = 'Sanctioned (' + pctSanctioned + '%)';
+                window.ledgerAllProjects = budget.projects || [];
+                window.renderLedgerProjects = function(filterStatus) {
+                    var listEl = document.getElementById('ledgerProjectsList');
+                    var projs = window.ledgerAllProjects;
+                    if (filterStatus && filterStatus !== 'all') {
+                        projs = projs.filter(function(p) {
+                            var st = (p.status || '').toLowerCase();
+                            if (filterStatus === 'in_progress') return st === 'in_progress';
+                            if (filterStatus === 'completed') return st === 'completed';
+                            if (filterStatus === 'verified') return st === 'closed' || st === 'verified';
+                            return true;
+                        });
+                    }
+                    if (!projs.length) {
+                        listEl.innerHTML = '<p>No projects match the selected filter.</p>';
+                        return;
+                    }
+                    listEl.innerHTML = projs.map(function(p) {
+                        var prog = p.progress || 0;
+                        var startStr = p.startDate ? 'Started: ' + new Date(p.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+                        var endStr = p.completedDate ? 'Completed: ' + new Date(p.completedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : (p.deadline ? 'Deadline: ' + new Date(p.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+                        var verHtml = [
+                            p.verificationsPhotos ? '<div class="verify-item success"><span class="material-symbols-outlined">check_circle</span><span>Photo Verified</span></div>' : '<div class="verify-item"><span class="material-symbols-outlined">pending</span><span>Photo Pending</span></div>',
+                            p.verificationsGps ? '<div class="verify-item success"><span class="material-symbols-outlined">check_circle</span><span>GPS Confirmed</span></div>' : '<div class="verify-item"><span class="material-symbols-outlined">pending</span><span>GPS Pending</span></div>',
+                            p.verificationsCommunity ? '<div class="verify-item success"><span class="material-symbols-outlined">check_circle</span><span>Community Approved</span></div>' : '<div class="verify-item"><span class="material-symbols-outlined">pending</span><span>Community Pending</span></div>',
+                            p.verificationsAudit ? '<div class="verify-item success"><span class="material-symbols-outlined">verified</span><span>Audit Complete</span></div>' : ''
+                        ].join('');
+                        return '<div class="project-card">' +
+                            '<div class="project-header"><div class="project-main"><h4>' + (p.name || '—') + '</h4><p>' + (p.externalId || '') + ' • ' + startStr + (endStr ? ' ' + endStr : '') + '</p></div>' +
+                            '<div class="project-status"><span class="status-badge ' + (p.status || '').replace(/\s+/g, '-') + '">' + (p.status || '—') + '</span></div></div>' +
+                            '<div class="project-funds">' +
+                            '<div class="fund-item"><span class="fund-label">Sanctioned</span><span class="fund-amount">' + fmt(p.sanctioned) + '</span></div>' +
+                            '<div class="fund-item"><span class="fund-label">Released</span><span class="fund-amount">' + fmt(p.released) + '</span></div>' +
+                            '<div class="fund-item"><span class="fund-label">Spent</span><span class="fund-amount spent">' + fmt(p.spent) + '</span></div>' +
+                            '</div>' +
+                            '<div class="project-progress"><div class="project-progress-bar"><div class="project-progress-fill" style="width:' + prog + '%"></div></div><span>' + prog + '%</span></div>' +
+                            '<div class="project-verification">' + verHtml + '</div></div>';
+                    }).join('');
+                };
+                window.renderLedgerProjects('all');
+                
+                // Bind filter clicks
+                var filterBtns = document.querySelectorAll('#ledgerFilterTabs .filter-tab');
+                filterBtns.forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        filterBtns.forEach(function(b) { b.classList.remove('active'); });
+                        this.classList.add('active');
+                        window.renderLedgerProjects(this.getAttribute('data-filter'));
+                    });
+                });
             } catch (e) {
                 document.getElementById('ledgerTotalReceived').textContent = '—';
                 document.getElementById('ledgerProjectsList').innerHTML = '<p>Could not load budget. Is the backend running?</p>';

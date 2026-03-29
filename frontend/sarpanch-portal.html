@@ -359,7 +359,8 @@
 </div><!-- /layout -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/auth.js"></script>
+<script src="js/env.js"></script>
+    <script src="js/auth.js"></script>
 <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
 <script>
@@ -395,7 +396,7 @@
                 if (budget) {
                     var total = budget.totalReceived || 0;
                     var spent = budget.totalSpent    || 0;
-                    var committed = budget.sanctionedFunds !== undefined ? budget.sanctionedFunds : (budget.pendingApproval || 0);
+                    var committed = budget.totalSanctioned || 0; // sum of all project sanctioned amounts
                     var avail = budget.available     || 0;
                     
                     document.getElementById('budgetValue').textContent = GramDrishti.formatCurrency(total);

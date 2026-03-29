@@ -609,13 +609,12 @@
 
                 <div class="location-section">
                     <label>Issue Location</label>
-                    <div class="location-box">
+                    <div class="location-box" id="locationBox">
                         <span class="material-symbols-outlined">location_on</span>
                         <div class="location-text">
-                            <strong>Near Hanuman Temple, Ward 4</strong>
-                            <span>Auto-detected via GPS</span>
+                            <strong id="locationStrong">Detecting location…</strong>
+                            <span id="locationSub">Auto-detected via GPS</span>
                         </div>
-                        <button>Change Location</button>
                     </div>
                 </div>
 
@@ -662,7 +661,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/auth.js"></script>
+<script src="js/env.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/app.js"></script>
 <script src="js/mobile.js"></script>
     <script>
@@ -674,6 +674,31 @@
                 this.classList.add('selected');
             });
         });
+
+        // === GPS Location Detection ===
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                var lat = pos.coords.latitude.toFixed(5);
+                var lng = pos.coords.longitude.toFixed(5);
+                var locationEl = document.getElementById('locationStrong');
+                var subEl = document.getElementById('locationSub');
+                if (locationEl) locationEl.textContent = 'Lat: ' + lat + ', Lng: ' + lng;
+                if (subEl) subEl.textContent = 'Auto-detected via GPS';
+                // Try reverse geocoding using a free API (no key needed for basic use)
+                fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng)
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) {
+                        var addr = d && d.display_name ? d.display_name.split(',').slice(0,3).join(',') : null;
+                        if (addr && locationEl) locationEl.textContent = addr;
+                    }).catch(function() {});
+            }, function() {
+                var locationEl = document.getElementById('locationStrong');
+                if (locationEl) locationEl.textContent = 'Location unavailable';
+            });
+        } else {
+            var locationEl = document.getElementById('locationStrong');
+            if (locationEl) locationEl.textContent = 'GPS not supported';
+        }
 
         // === File Attachment Logic ===
         var selectedFiles = [];

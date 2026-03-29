@@ -486,7 +486,10 @@
                     <p>Monitor all village governance activities</p>
                 </div>
                 <div class="header-actions">
-                    <button class="notification-btn">
+                    <button class="btn-primary" onclick="openGrantFundsModal()" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); font-weight: bold; cursor: pointer;">
+                        <span class="material-symbols-outlined" style="font-size: 1.25rem;">paid</span> Grant Funds
+                    </button>
+                    <button class="notification-btn" onclick="GramDrishti.showNotification('No new system notifications at this time', 'info')">
                         <span class="material-symbols-outlined">notifications</span>
                         <span class="notification-dot"></span>
                     </button>
@@ -570,6 +573,31 @@
                     </table>
                 </div>
 
+                <!-- Villages & Issues Management Section -->
+                <div class="directory-section">
+                    <div class="directory-header">
+                        <h3>Villages & Issues Management</h3>
+                        <button class="btn-primary" onclick="openAddIssueModal()" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); font-weight: bold; cursor: pointer;">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">add</span> Add Problem
+                        </button>
+                    </div>
+                    <table class="directory-table">
+                        <thead>
+                            <tr>
+                                <th>Village</th>
+                                <th>Sarpanch</th>
+                                <th>Village People</th>
+                                <th>Open Issues</th>
+                                <th>Resolved Issues</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="villagesTableBody">
+                            <tr><td colspan="6" style="text-align:center; padding: 2rem;">Loading villages...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
                 <!-- Security Panel -->
                 <div class="security-panel">
                     <div class="security-header">
@@ -584,8 +612,94 @@
         </main>
     </div>
 
+    <!-- Grant Funds Modal -->
+    <div id="grantFundsModal" class="db-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:9999;">
+        <div class="db-modal-content" style="background:var(--white); padding:2rem; border-radius:var(--radius-2xl); width:400px; max-width:90%; position:relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <h3 style="margin:0; font-size:1.25rem; font-weight:800;">Grant Village Funds</h3>
+                <button onclick="document.getElementById('grantFundsModal').style.display='none'" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+            </div>
+            <form id="grantFundsForm">
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:700; margin-bottom:0.5rem;">Select Village</label>
+                    <select id="gfVillage" required style="width:100%; padding:0.75rem; border:2px solid #e2e8f0; border-radius:var(--radius-lg); font-size:1rem; outline:none;">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:700; margin-bottom:0.5rem;">Amount to Grant (₹)</label>
+                    <input type="number" id="gfAmount" min="1000" required placeholder="e.g. 500000" style="width:100%; padding:0.75rem; border:2px solid #e2e8f0; border-radius:var(--radius-lg); font-size:1rem; outline:none;">
+                </div>
+                <button type="submit" id="gfSubmit" style="width:100%; padding:1rem; background:var(--primary); color:white; border:none; border-radius:var(--radius-lg); font-weight:700; cursor:pointer; font-size:1rem;">Grant Funds</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Issue Modal -->
+    <div id="addIssueModal" class="db-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:9999; overflow-y:auto;">
+        <div class="db-modal-content" style="background:var(--white); padding:2rem; border-radius:var(--radius-2xl); width:500px; max-width:90%; position:relative; margin:2rem auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <h3 style="margin:0; font-size:1.25rem; font-weight:800;">Add Problem / Issue</h3>
+                <button onclick="document.getElementById('addIssueModal').style.display='none'" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+            </div>
+            <form id="addIssueForm">
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:700; margin-bottom:0.5rem;">Select Village</label>
+                    <select id="aiVillage" required style="width:100%; padding:0.75rem; border:2px solid #e2e8f0; border-radius:var(--radius-lg); font-size:1rem; outline:none;">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:700; margin-bottom:0.5rem;">Issue Title</label>
+                    <input type="text" id="aiTitle" required placeholder="e.g., Broken Water Pipe" style="width:100%; padding:0.75rem; border:2px solid #e2e8f0; border-radius:var(--radius-lg); font-size:1rem; outline:none;">
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:700; margin-bottom:0.5rem;">Description</label>
+                    <textarea id="aiDescription" required placeholder="Detailed description..." style="width:100%; padding:0.75rem; border:2px solid #e2e8f0; border-radius:var(--radius-lg); font-size:1rem; outline:none; min-height:100px; resize:vertical;"></textarea>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:700; margin-bottom:0.5rem;">Category</label>
+                    <select id="aiCategory" required style="width:100%; padding:0.75rem; border:2px solid #e2e8f0; border-radius:var(--radius-lg); font-size:1rem; outline:none;">
+                        <option value="">Select Category</option>
+                        <option value="water">Water Supply</option>
+                        <option value="electricity">Electricity</option>
+                        <option value="roads">Roads & Infrastructure</option>
+                        <option value="sanitation">Sanitation</option>
+                        <option value="education">Education</option>
+                        <option value="health">Health</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:700; margin-bottom:0.5rem;">Priority</label>
+                    <select id="aiPriority" style="width:100%; padding:0.75rem; border:2px solid #e2e8f0; border-radius:var(--radius-lg); font-size:1rem; outline:none;">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <button type="submit" id="aiSubmit" style="width:100%; padding:1rem; background:var(--primary); color:white; border:none; border-radius:var(--radius-lg); font-weight:700; cursor:pointer; font-size:1rem;">Add Problem</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Issues Modal -->
+    <div id="viewIssuesModal" class="db-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:9999; overflow-y:auto;">
+        <div class="db-modal-content" style="background:var(--white); padding:2rem; border-radius:var(--radius-2xl); width:600px; max-width:90%; position:relative; margin:2rem auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <h3 style="margin:0; font-size:1.25rem; font-weight:800;" id="viewIssuesTitle">Village Issues</h3>
+                <button onclick="document.getElementById('viewIssuesModal').style.display='none'" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+            </div>
+            <div id="issuesListContainer" style="max-height:400px; overflow-y:auto;">
+                <p style="text-align:center;">Loading issues...</p>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/auth.js"></script>
+<script src="js/env.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/app.js"></script>
     <script src="js/mobile.js"></script>
     <script>
@@ -601,10 +715,44 @@
             await initAdminDashboard();
         });
 
+        function openGrantFundsModal() {
+            document.getElementById('grantFundsModal').style.display = 'flex';
+            const sel = document.getElementById('gfVillage');
+            GramDrishti.listVillages().then(list => {
+                sel.innerHTML = '<option value="">Select Village</option>' + (list || []).map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+            }).catch(e => sel.innerHTML = '<option value="">Error loading villages</option>');
+        }
+
+        document.getElementById('grantFundsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('gfSubmit');
+            const vId = document.getElementById('gfVillage').value;
+            const amt = document.getElementById('gfAmount').value;
+            
+            btn.disabled = true; 
+            btn.textContent = 'Processing...';
+            try {
+                await GramDrishti.grantFunds(vId, amt);
+                GramDrishti.showNotification(`Successfully granted ₹${parseInt(amt).toLocaleString('en-IN')} to the village!`, 'success');
+                document.getElementById('grantFundsModal').style.display = 'none';
+                document.getElementById('grantFundsForm').reset();
+                
+                // Refresh dashboard to show updated money
+                await initAdminDashboard();
+            } catch (err) {
+                GramDrishti.showNotification(err.message, 'error');
+            }
+            btn.disabled = false; 
+            btn.textContent = 'Grant Funds';
+        });
+
         async function initAdminDashboard() {
             try {
+                console.log('Starting admin dashboard initialization...');
+                
                 // 1. Fetch & Render Stats
-                const stats = await getAdminStats();
+                const stats = await GramDrishti.getAdminStats();
+                console.log('Stats loaded:', stats);
                 document.querySelectorAll('.stat-value')[0].textContent = stats.activeVillages || 0;
                 document.querySelectorAll('.stat-value')[1].textContent = stats.registeredUsers || 0;
                 document.querySelectorAll('.stat-value')[2].textContent = stats.issuesResolved || 0;
@@ -612,7 +760,8 @@
                 document.querySelectorAll('.stat-value')[3].textContent = '₹' + (funds >= 10000000 ? (funds/10000000).toFixed(2) + ' Cr' : funds >= 100000 ? (funds/100000).toFixed(2) + ' L' : funds.toLocaleString());
 
                 // 2. Fetch & Render Users
-                const users = await getAdminUsers();
+                const users = await GramDrishti.getAdminUsers();
+                console.log('Users loaded:', users?.length || 0);
                 const tbody = document.getElementById('directoryTableBody');
                 if (!users || users.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No users found.</td></tr>';
@@ -652,7 +801,8 @@
                 }
 
                 // 3. Fetch & Render Alerts (Activities)
-                const alerts = await getAdminAlerts();
+                const alerts = await GramDrishti.getAdminAlerts();
+                console.log('Alerts loaded:', alerts?.length || 0);
                 const alertsContainer = document.getElementById('alertsContainer');
                 if (!alerts || alerts.length === 0) {
                     alertsContainer.innerHTML = '<div style="text-align:center; opacity:.5;">No recent system activity.</div>';
@@ -676,9 +826,142 @@
                     }).join('');
                 }
 
+                // 4. Fetch & Render Villages with Details
+                console.log('Fetching villages data...');
+                const villagesData = await GramDrishti.getAdminVillagesWithDetails();
+                console.log('Villages loaded:', villagesData?.length || 0, villagesData);
+                const villagesTbody = document.getElementById('villagesTableBody');
+                if (!villagesData || villagesData.length === 0) {
+                    villagesTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No villages found.</td></tr>';
+                } else {
+                    villagesTbody.innerHTML = villagesData.map(v => {
+                        return `
+                        <tr>
+                            <td><strong>${v.name}</strong></td>
+                            <td>${v.sarpanchName}</td>
+                            <td>${v.villagerCount}</td>
+                            <td><span style="background:#dbeafe; padding:0.25rem 0.75rem; border-radius:var(--radius-full); font-size:0.75rem; font-weight:600; color:#1e40af;">${v.openIssues}</span></td>
+                            <td><span style="background:#dcfce7; padding:0.25rem 0.75rem; border-radius:var(--radius-full); font-size:0.75rem; font-weight:600; color:#15803d;">${v.resolvedIssues}</span></td>
+                            <td>
+                                <button class="action-btn-table" onclick="openViewIssuesModal(${v.id}, '${v.name.replace(/'/g, "\\'")}', ${v.openIssues}, ${v.resolvedIssues})" title="View Issues"><span class="material-symbols-outlined">visibility</span></button>
+                                <button class="action-btn-table" onclick="openDeleteIssueModal(${v.id}, '${v.name.replace(/'/g, "\\'")}')" title="Delete Issue"><span class="material-symbols-outlined">delete</span></button>
+                            </td>
+                        </tr>`;
+                    }).join('');
+                }
+                
+                console.log('Admin dashboard initialized successfully!');
+
             } catch (error) {
                 console.error("Dashboard init error:", error);
+                document.getElementById('villagesTableBody').innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Error loading data: ${error.message}</td></tr>`;
             }
+        }
+
+        // Open Add Issue Modal
+        function openAddIssueModal() {
+            document.getElementById('addIssueModal').style.display = 'flex';
+            const sel = document.getElementById('aiVillage');
+            GramDrishti.listVillages().then(list => {
+                sel.innerHTML = '<option value="">Select Village</option>' + (list || []).map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+            }).catch(e => sel.innerHTML = '<option value="">Error loading villages</option>');
+        }
+
+        // Submit Add Issue Form
+        document.getElementById('addIssueForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('aiSubmit');
+            const vId = document.getElementById('aiVillage').value;
+            const title = document.getElementById('aiTitle').value;
+            const desc = document.getElementById('aiDescription').value;
+            const cat = document.getElementById('aiCategory').value;
+            const priority = document.getElementById('aiPriority').value;
+            
+            btn.disabled = true; 
+            btn.textContent = 'Creating...';
+            try {
+                const user = GramDrishti.getCurrentUser();
+                await GramDrishti.createIssue({
+                    title: title,
+                    description: desc,
+                    category: cat,
+                    villageId: parseInt(vId),
+                    reportedById: user?.id || null,
+                    priority: priority,
+                    attachments: []
+                });
+                GramDrishti.showNotification('Problem successfully added!', 'success');
+                document.getElementById('addIssueModal').style.display = 'none';
+                document.getElementById('addIssueForm').reset();
+                
+                // Refresh dashboard
+                await initAdminDashboard();
+            } catch (err) {
+                GramDrishti.showNotification(err.message || 'Error adding problem', 'error');
+            }
+            btn.disabled = false; 
+            btn.textContent = 'Add Problem';
+        });
+
+        // Open View Issues Modal
+        function openViewIssuesModal(villageId, villageName, openCount, resolvedCount) {
+            document.getElementById('viewIssuesTitle').textContent = `Issues - ${villageName}`;
+            const container = document.getElementById('issuesListContainer');
+            
+            // Show loading state
+            container.innerHTML = '<p style="text-align:center; padding:2rem;">Loading issues...</p>';
+            document.getElementById('viewIssuesModal').style.display = 'flex';
+            
+            // Fetch issues for this village
+            GramDrishti.getIssues(villageId).then(issues => {
+                if (!issues || issues.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; padding:2rem;">No issues in this village.</p>';
+                } else {
+                    container.innerHTML = issues.map(issue => {
+                        const statusColor = issue.status === 'resolved' || issue.status === 'closed' ? '#dcfce7' : 
+                                           (issue.status === 'open' || issue.status === 'submitted') ? '#fee2e2' : '#dbeafe';
+                        const statusText = issue.status || 'open';
+                        const issueTitle = (issue.title || issue.name || 'Untitled').replace(/'/g, "\\'");
+                        return `
+                        <div style="padding:1rem; border:1px solid #e2e8f0; border-radius:var(--radius); margin-bottom:0.75rem; display:flex; justify-content:space-between; align-items:start;">
+                            <div style="flex:1;">
+                                <h4 style="margin:0 0 0.25rem 0; font-size:0.875rem; font-weight:700;">${issue.title || issue.name || 'Untitled'}</h4>
+                                <p style="margin:0; font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">${issue.description || ''}</p>
+                                <span style="display:inline-block; background:${statusColor}; padding:0.25rem 0.5rem; border-radius:var(--radius); font-size:0.625rem; font-weight:600; margin-top:0.5rem; text-transform:capitalize;">${statusText}</span>
+                            </div>
+                            <button class="action-btn-table" onclick="deleteIssueFromAdmin(${issue.id}, '${issueTitle}')" title="Delete Issue" style="margin-left:1rem;">
+                                <span class="material-symbols-outlined" style="color:#dc2626;">delete</span>
+                            </button>
+                        </div>`;
+                    }).join('');
+                }
+            }).catch(err => {
+                console.error('Error fetching issues:', err);
+                container.innerHTML = '<p style="text-align:center; padding:2rem; color:red;">Error loading issues. Please try again.</p>';
+            });
+        }
+
+        // Delete Issue Function
+        async function deleteIssueFromAdmin(issueId, issueTitle) {
+            if (!confirm(`Delete issue "${issueTitle}"? This cannot be undone.`)) return;
+            
+            try {
+                const user = GramDrishti.getCurrentUser();
+                // Pass user.role as 3rd arg so admin bypass check works
+                await GramDrishti.deleteIssue(issueId, user?.id, user?.role);
+                GramDrishti.showNotification('Issue successfully deleted!', 'success');
+                document.getElementById('viewIssuesModal').style.display = 'none';
+                await initAdminDashboard();
+            } catch (err) {
+                GramDrishti.showNotification(err.message || 'Error deleting issue', 'error');
+            }
+        }
+
+        // Open Delete Issue Modal (reserved for future use if needed)
+        function openDeleteIssueModal(villageId, villageName) {
+            // Alternative: Open the view issues modal instead for easier deletion
+            // Or create a separate modal for batch deletion
+            openViewIssuesModal(villageId, villageName, []);
         }
     </script>
     <style>
