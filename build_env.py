@@ -40,3 +40,24 @@ with open(output_path, 'w', encoding='utf-8') as f:
     f.write('};\n')
 
 print(f"✅ Generated {output_path} successfully with {len(env_vars)} variables.")
+
+# 4. Copy the media folder into frontend so Netlify can serve it
+import shutil
+media_src = 'media'
+media_dst = 'frontend/media'
+
+if os.path.exists(media_src):
+    # Only copy if dst does NOT exist or if we want to overwrite, but lets just copy files missing
+    if not os.path.exists(media_dst):
+        print(f"Copying {media_src} to {media_dst}...")
+        shutil.copytree(media_src, media_dst)
+    else:
+        # Simple file sync
+        for item in os.listdir(media_src):
+            s = os.path.join(media_src, item)
+            d = os.path.join(media_dst, item)
+            if os.path.isfile(s):
+                shutil.copy2(s, d)
+    print("✅ Media folder copied successfully.")
+else:
+    print("⚠️ Media folder not found.")
