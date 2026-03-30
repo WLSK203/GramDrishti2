@@ -631,22 +631,32 @@ document.addEventListener('DOMContentLoaded', function() {
     if (issueParam) {
         _currentIssueId = issueParam;
         // Fetch issue details directly via GramDrishti
-        GramDrishti.getIssues()
+        var userForIssue = GramDrishti.getCurrentUser();
+        var vIdForIssue  = userForIssue ? (userForIssue.villageId || userForIssue.village_id) : null;
+        GramDrishti.getIssues(vIdForIssue)
             .then(function(allIssues) {
-                _currentIssueData = allIssues.find(function(i) { return i.id === issueParam || String(i.numericId) === issueParam; });
+                // Match by UUID string, or numeric id, or string of id
+                _currentIssueData = allIssues.find(function(i) {
+                    return String(i.id) === String(issueParam) ||
+                           (i.numericId !== undefined && String(i.numericId) === String(issueParam));
+                });
+                if (!_currentIssueData) {
+                    console.warn('Issue not found for param:', issueParam, '— total issues:', allIssues.length);
+                }
                 // Show a top banner so sarpanch knows what they're assigning
                 var banner = document.createElement('div');
                 banner.style.cssText = 'background:#f0fdf4;border:2px solid #86efac;border-radius:1rem;padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap';
-                var issueTitle = (_currentIssueData && _currentIssueData.title) || issueParam;
+                var issueTitle = (_currentIssueData && _currentIssueData.title) || ('Issue #' + issueParam);
                 var issueDesc  = (_currentIssueData && _currentIssueData.description) || '';
                 banner.innerHTML =
                     '<div>' +
-                        '<p style="font-size:.6875rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#16a34a;margin:0 0 .25rem">Assigning Complaint</p>' +
+                        '<p style="font-size:.6875rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#16a34a;margin:0 0 .25rem">Assigning Complaint to Contractor</p>' +
                         '<p style="font-size:1rem;font-weight:800;color:#0f172a;margin:0">' + issueTitle + '</p>' +
                         (issueDesc ? '<p style="font-size:.8125rem;color:#475569;margin:.2rem 0 0">' + issueDesc + '</p>' : '') +
+                        '<p style="font-size:.75rem;color:#64748b;margin:.375rem 0 0">Click <strong>Assign</strong> on any available contractor below to proceed.</p>' +
                     '</div>' +
                     '<a href="sarpanch-portal.html" style="font-size:.8125rem;font-weight:700;color:#64748b;white-space:nowrap">← Back</a>';
-                var mainEl = document.querySelector('.ct-main') || document.querySelector('main') || document.body;
+                var mainEl = document.querySelector('main') || document.body;
                 mainEl.insertBefore(banner, mainEl.firstChild);
             })
             .catch(function(err) { console.warn('Could not fetch issue:', err); });
@@ -712,59 +722,8 @@ document.addEventListener('DOMContentLoaded', function() {
         GramDrishti.showNotification('Contractor ' + escapeHtml(cName) + ' registered successfully!', 'success');
     });
 
-    document.getElementById('assignProjectForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        var projId = document.getElementById('assignProjectSelect').value;
-        if (!projId) return;
-        
-        var btn = document.getElementById('assignSubmitBtn');
-        btn.disabled = true;
-        btn.textContent = 'Assigning...';
-        
-        try {
-            var sanctionedAmount = null;
-            // Check if there's a sanctioned fund input (from new assignment modal)
-            var fundInput = document.getElementById('dynamicIssueFund');
-            if (fundInput && fundInput.value) {
-                sanctionedAmount = parseInt(fundInput.value);
-            }
-            
-            // Validate sanctioned amount for projects
-            if (projId && !sanctionedAmount) {
-                GramDrishti.showNotification('Committed amount is required', 'error');
-                btn.disabled = false;
-                btn.textContent = 'Confirm Assignment';
-                return;
-            }
-            
-            await GramDrishti.assignProject(projId, window.currentAssignee, sanctionedAmount);
-            // Sync contractor stats from real DB data
-            var c = contractors.find(x => x.name === window.currentAssignee);
-            if (c) {
-                c.status = 'busy';
-                // Recalculate projects + value from DB
-                try {
-                    var userSess = GramDrishti.getCurrentUser() || JSON.parse(localStorage.getItem('gram_drishti_session') || '{}');
-                    var bData = await GramDrishti.getBudget(userSess.villageId || userSess.village_id || 1);
-                    if (bData && bData.projects) {
-                        var myProjects = bData.projects.filter(p => p.contractor === c.name);
-                        c.projects = myProjects.length;
-                        c.valueNum = myProjects.reduce(function(sum, p) { return sum + (p.sanctioned || 0); }, 0);
-                        c.value = GramDrishti.formatCurrency(c.valueNum);
-                    }
-                } catch(_) {}
-                localStorage.setItem('gs_contractors', JSON.stringify(contractors));
-            }
-            GramDrishti.showNotification('Successfully assigned to ' + window.currentAssignee, 'success');
-            closeAssignModal();
-            renderCards();
-        } catch(err) {
-            GramDrishti.showNotification(err.message || 'Assignment failed', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Confirm Assignment';
-        }
-    });
+    // NOTE: The single, complete form submit handler is defined further below.
+    // No duplicate handler here — prevents double-fire and zero-amount bugs.
 });
 
 /* ── Render ── */
@@ -1062,8 +1021,13 @@ document.getElementById('assignProjectForm').addEventListener('submit', async fu
     try {
         if (_currentIssueId) {
             var issueFundReq = document.getElementById('assignIssueFund').value;
-            console.log(`📋 Assigning issue ${_currentIssueId} with fund: ₹${issueFundReq}`);
-            await GramDrishti.assignIssueToContractor(_currentIssueId, window.currentAssignee, parseInt(issueFundReq) || 0);
+            var issueFundNum = parseInt(issueFundReq) || 0;
+            if (!issueFundNum || issueFundNum <= 0) {
+                GramDrishti.showNotification('Please enter the fund required for this complaint (₹)', 'error');
+                btn.disabled = false; btn.textContent = 'Confirm Assignment'; return;
+            }
+            console.log(`📋 Assigning issue ${_currentIssueId} with fund: ₹${issueFundNum}`);
+            await GramDrishti.assignIssueToContractor(_currentIssueId, window.currentAssignee, issueFundNum);
         } else {
             var selectedVal = document.getElementById('assignProjectSelect').value;
             if (!selectedVal) { GramDrishti.showNotification('Please select a task', 'error'); btn.disabled = false; btn.textContent = 'Confirm Assignment'; return; }
