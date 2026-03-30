@@ -687,6 +687,42 @@
 }
 
 /* ══════════════════════════════════════════════════
+   MID-RANGE PHABLETS (481px – 600px)
+   Catches the gap between small phone and tablet
+══════════════════════════════════════════════════ */
+@media (min-width: 481px) and (max-width: 600px) {
+    /* Action cards — comfortable row layout */
+    .action-card {
+        flex-direction: row !important;
+        padding: 1rem 1.25rem !important;
+        align-items: center !important;
+        gap: 0.875rem !important;
+    }
+    .action-icon { font-size: 2rem !important; margin-bottom: 0 !important; }
+    .action-text h3 { font-size: 1rem !important; }
+
+    /* Services — 2 columns */
+    .services-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 0.75rem !important; }
+    .portals-grid  { grid-template-columns: repeat(2, 1fr) !important; gap: 0.75rem !important; }
+
+    /* Admin header — keep horizontal */
+    .admin-header {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+    .header-actions { flex-wrap: wrap; }
+
+    /* Project stats — 2 columns */
+    .project-stats { grid-template-columns: repeat(2, 1fr) !important; }
+    .stats-row     { grid-template-columns: repeat(2, 1fr) !important; }
+
+    /* Form inputs — prevent iOS zoom */
+    input, select, textarea { font-size: 1rem !important; }
+}
+
+/* ══════════════════════════════════════════════════
    TABLETS (769px – 1024px)
 ══════════════════════════════════════════════════ */
 @media (min-width: 769px) and (max-width: 1024px) {

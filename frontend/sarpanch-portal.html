@@ -511,15 +511,15 @@
                                                 '</div>' +
                                             '</div>' +
                                         '</td>' +
-                                        '<td style="font-size:.875rem;color:#475569;font-weight:600">' + cName + '</td>' +
-                                        '<td style="font-size:.875rem;font-weight:700;color:#0f172a">' + amt + '</td>' +
-                                        '<td>' +
+                                        '<td data-label="Contractor" style="font-size:.875rem;color:#475569;font-weight:600">' + cName + '</td>' +
+                                        '<td data-label="Budget" style="font-size:.875rem;font-weight:700;color:#0f172a">' + amt + '</td>' +
+                                        '<td data-label="Progress">' +
                                             '<div class="sp-prog-cell">' +
                                                 '<div class="sp-prog-bar"><div class="sp-prog-fill" style="width:' + prog + '%"></div></div>' +
                                                 '<span class="sp-prog-pct">' + prog + '%</span>' +
                                             '</div>' +
                                         '</td>' +
-                                        '<td><span class="sp-status-tag ' + statusClass + '">' + statusLabel + '</span></td>' +
+                                        '<td data-label="Status"><span class="sp-status-tag ' + statusClass + '">' + statusLabel + '</span></td>' +
                                         '<td>' +
                                             '<button class="sp-table-action" onclick="window.location.href=\'active-projects.html\'" aria-label="View project details">' +
                                                 '<span class="material-symbols-outlined" aria-hidden="true">visibility</span>' +
