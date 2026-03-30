@@ -251,14 +251,37 @@ async function getBudget(villageId) {
 
         console.log(`💰 Budget for village ${villageId}: Received: ₹${totalReceived}, Sanctioned: ₹${totalSanctioned}, Spent: ₹${realSpent}, Pending: ₹${realPending}`);
 
+        // Normalize each project row: map Supabase snake_case → UI camelCase
+        // so every page (public-ledger, contractor-verification, sarpanch-portal) reads correctly
+        const normalizedProjects = allProjects.map(p => ({
+            ...p,
+            // camelCase aliases for snake_case DB columns
+            externalId:                    p.external_id || p.externalId || null,
+            villageId:                     p.village_id  || p.villageId  || null,
+            startDate:                     p.start_date  || p.startDate  || null,
+            completedDate:                 p.completed_date || p.completedDate || null,
+            verificationsSiteInspection:   p.verifications_site_inspection || false,
+            verificationsPhotos:           p.verifications_photos          || false,
+            verificationsMaterials:        p.verifications_materials       || false,
+            verificationsGps:              p.verifications_gps             || false,
+            verificationsCommunity:        p.verifications_community       || false,
+            verificationsAudit:            p.verifications_audit           || false,
+            verificationImages:            p.verification_images           || [],
+            // Keep sanctioned always as a number
+            sanctioned: parseFloat(p.sanctioned) || 0,
+            spent:      parseFloat(p.spent)      || 0,
+            released:   parseFloat(p.released)   || 0,
+            progress:   parseFloat(p.progress)   || 0,
+        }));
+
         return {
             totalReceived,
             totalSpent:      realSpent,
-            totalSanctioned, // ← NEW: total committed/sanctioned across all projects
+            totalSanctioned, // ← total committed/sanctioned across all active projects
             pendingApproval: realPending,
             available:       totalReceived - realSpent - realPending,
             fiscalYear:      summary?.fiscal_year || '',
-            projects:        allProjects
+            projects:        normalizedProjects
         };
     } catch(err) {
         console.error('getBudget error:', err);
